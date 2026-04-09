@@ -93,3 +93,101 @@ npm run dev
 ## Язык интерфейса
 
 Весь UI на **нюнорск** (Nynorsk). Переводы в `frontend/src/i18n/labels.js`.
+
+---
+
+# Bookingsystem for møterom
+
+System for å bestille møterom med nettgrensesnitt på nynorsk.
+
+## Funksjonar
+
+- **Bestilling av rom** — vel ledig tid, automatiske forslag til ledige tider, vekekalender.
+- **Fleire bilete** — ein kan laste opp fleire bilete til kvart rom; karusell på romsida.
+- **Fleksible avgrensingar** — admin set minimum/maksimum varigheit for kvar booking per rom (eller slår av grensa).
+- **E-poststadfesting** — ved registrering, byte av passord og byte av e-post vert det sendt ein stadfestingskode.
+- **Admin-rolle** — vert automatisk tildelt etter e-postliste i `ADMIN_EMAILS`.
+- **Admin-panel** — oppretting/redigering/sletting av rom, brukaradministrasjon, avbestilling av andre sine bookingar.
+- **Varsel** — når admin avbestiller ei booking, får eigaren e-post.
+- **Stadfestingar** — alle destruktive handlingar krev stadfesting via modalt vindauge.
+- **Historikk** — sortering etter tid eller aktivitet; tidlegare bookingar er berre synlege for admin.
+
+## Teknologiar
+
+| Lag | Stakk |
+|-----|-------|
+| Frontend | React 18, Vite, React Router, CSS (BEM) |
+| Backend | Node.js, Express, JWT, bcryptjs |
+| Database | PostgreSQL, GiST exclusion constraints |
+| E-post | Nodemailer (Gmail SMTP) |
+| Filar | Multer (opplasting av bilete) |
+
+## Prosjektstruktur
+
+```
+database/migrations/     — SQL-migrasjonar (001–004)
+backend/src/
+  config/                — miljøkonfigurasjon
+  db/                    — tilkoplingspool til PostgreSQL
+  models/                — repository (SQL-spørjingar)
+  services/              — forretningslogikk
+  controllers/           — HTTP-handsamarar
+  routes/                — API-rutar
+  middlewares/           — auth, RBAC, feilhandsaming
+  utils/                 — mailer, HttpError
+frontend/src/
+  pages/                 — sider (Heim, Rom, Auth, Profil, Admin)
+  components/            — gjenbrukbare komponentar (ConfirmDialog)
+  context/               — AuthContext
+  i18n/                  — nynorsk ordbok
+  styles/                — app.css
+```
+
+## Kjapt oppsett
+
+### 1. Database
+
+```bash
+# Opprett databasen og køyr migrasjonane i rekkjefølgje:
+psql -U postgres -c "CREATE DATABASE booking_app_db;"
+psql -U postgres -d booking_app_db -f database/migrations/001_init.sql
+psql -U postgres -d booking_app_db -f database/migrations/002_seed.sql
+psql -U postgres -d booking_app_db -f database/migrations/003_flexible_duration.sql
+psql -U postgres -d booking_app_db -f database/migrations/004_room_photos.sql
+```
+
+### 2. Backend
+
+```bash
+cd backend
+cp env.example .env
+# Rediger .env — oppgje DB-passord, JWT_SECRET, SMTP-innstillingar, ADMIN_EMAILS
+npm install
+npm run dev
+# Tenaren startar på http://localhost:4000
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Opne http://localhost:5173
+```
+
+## Miljøvariablar (backend/.env)
+
+| Variabel | Skildring |
+|----------|-----------|
+| `DATABASE_URL` | Tilkoplingsstreng til PostgreSQL |
+| `JWT_SECRET` | Hemmeleg nøkkel for JWT-token |
+| `PORT` | Tenarport (standard 4000) |
+| `FRONTEND_URL` | Frontend-URL for CORS |
+| `SMTP_USER` | Gmail-adresse for sending av e-post |
+| `SMTP_PASS` | App Password frå Gmail |
+| `ADMIN_EMAILS` | Kommaseparert liste med e-postar — desse brukarane får admin-rolla ved registrering |
+
+## Grensesnittspråk
+
+Heile grensesnittet er på **nynorsk**. Omsetjingar finst i `frontend/src/i18n/labels.js`.
