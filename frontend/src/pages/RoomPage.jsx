@@ -235,19 +235,29 @@ export const RoomPage = () => {
   // Генерируем массив дней для недельного календаря.
   const weekDays = useMemo(() => buildWeekGrid(weekStart), [weekStart]);
 
-  // Проверяем, забронирован ли часовой слот (для раскраски ячейки календаря).
-  const isSlotBooked = (day, hour) => {
-    // Создаём начало часового слота.
+  const getSlotInfo = (day, hour) => {
     const slotStart = new Date(day);
     slotStart.setHours(hour, 0, 0, 0);
-    // Создаём конец часового слота (через 1 час).
     const slotEnd = new Date(slotStart.getTime() + 3600000);
-    // Проверяем пересечение с любым бронированием.
-    return bookings.some((b) => {
+    const fmt = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+    const overlapping = bookings.filter((b) => {
       const bs = new Date(b.start_time).getTime();
       const be = new Date(b.end_time).getTime();
       return slotStart.getTime() < be && slotEnd.getTime() > bs;
     });
+
+    if (overlapping.length === 0) return null;
+
+    const labels = [];
+    for (const b of overlapping) {
+      const bs = new Date(b.start_time);
+      const be = new Date(b.end_time);
+      if (bs >= slotStart && bs < slotEnd) labels.push(fmt(bs));
+      if (be > slotStart && be <= slotEnd) labels.push(fmt(be));
+    }
+    const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
+    return { booked: true, past: allPast, label: [...new Set(labels)].join(" - ") };
   };
 
   // Форматируем ISO-дату в читаемый формат (dd.MM HH:mm).
@@ -264,16 +274,19 @@ export const RoomPage = () => {
   if (!room) return <div className="page">Lastar...</div>;
 
   const now = new Date();
+  const sortFn = (a, b) => {
+    if (historySort === "activity") return new Date(b.created_at) - new Date(a.created_at);
+    return new Date(a.start_time) - new Date(b.start_time);
+  };
   const futureBookings = history
     .filter((b) => new Date(b.end_time) > now && b.status !== "cancelled")
-    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    .sort(sortFn);
   const pastBookings = history
     .filter((b) => new Date(b.end_time) <= now || b.status === "cancelled")
     .sort((a, b) => {
       if (a.status === "cancelled" && b.status !== "cancelled") return 1;
       if (a.status !== "cancelled" && b.status === "cancelled") return -1;
-      if (historySort === "activity") return new Date(b.created_at) - new Date(a.created_at);
-      return new Date(b.start_time) - new Date(a.start_time);
+      return sortFn(a, b);
     });
 
   return (
@@ -381,13 +394,13 @@ export const RoomPage = () => {
             <div key={h} className="calendar-grid__row">
               {/* Метка часа в левом столбце. */}
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
-              {/* Ячейки дней: красим, если есть бронирование. */}
               {weekDays.map((d) => {
-                const booked = isSlotBooked(d, h);
+                const info = getSlotInfo(d, h);
                 return (
                   <div key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${booked ? "calendar-grid__cell--booked" : ""}`}
-                  />
+                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}>
+                    {info?.label && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{info.label}</span>}
+                  </div>
                 );
               })}
             </div>
@@ -399,8 +412,17 @@ export const RoomPage = () => {
       <div className="room-bottom">
         {/* Левая половина: история бронирований. */}
         <div className="room-bottom__history">
-          <h2 className="section-title">{t.room_history}</h2>
-          {/* Будущие бронирования (сверху). */}
+          <div className="history-header">
+            <h2 className="section-title">{t.room_history}</h2>
+            <div className="history-sort">
+              <button type="button"
+                className={`btn btn--tiny ${historySort === "time" ? "btn--active" : ""}`}
+                onClick={() => setHistorySort("time")}>{t.room_sort_time}</button>
+              <button type="button"
+                className={`btn btn--tiny ${historySort === "activity" ? "btn--active" : ""}`}
+                onClick={() => setHistorySort("activity")}>{t.room_sort_activity}</button>
+            </div>
+          </div>
           {futureBookings.length > 0 && (
             <>
               <h3 className="subsection-title">Komande</h3>
@@ -422,17 +444,7 @@ export const RoomPage = () => {
           )}
           {pastBookings.length > 0 && (
             <>
-              <div className="history-header">
-                <h3 className="subsection-title">Tidlegare</h3>
-                <div className="history-sort">
-                  <button type="button"
-                    className={`btn btn--tiny ${historySort === "time" ? "btn--active" : ""}`}
-                    onClick={() => setHistorySort("time")}>{t.room_sort_time}</button>
-                  <button type="button"
-                    className={`btn btn--tiny ${historySort === "activity" ? "btn--active" : ""}`}
-                    onClick={() => setHistorySort("activity")}>{t.room_sort_activity}</button>
-                </div>
-              </div>
+              <h3 className="subsection-title">Tidlegare</h3>
               {pastBookings.map((b) => (
                 <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
                   <span>{formatTime(b.start_time)} - {formatTime(b.end_time)}</span>

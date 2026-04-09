@@ -118,7 +118,17 @@ class UserRepository {
     return rows[0] || null;
   }
 
-  // Удаляем пользователя из базы (используется админом).
+  static async updateEmail(id, newEmail) {
+    const { rows } = await pool.query(
+      `UPDATE users SET email = $2, email_verified = TRUE,
+       verification_code = NULL, verification_expires_at = NULL,
+       updated_at = NOW() WHERE id = $1
+       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at`,
+      [id, newEmail]
+    );
+    return rows[0] || null;
+  }
+
   static async deleteUser(id) {
     // Выполняем DELETE-запрос и проверяем количество затронутых строк.
     const { rowCount } = await pool.query(`DELETE FROM users WHERE id = $1`, [id]);

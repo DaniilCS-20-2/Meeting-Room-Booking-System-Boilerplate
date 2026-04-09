@@ -8,10 +8,11 @@ const authMiddleware = require("../middlewares/authMiddleware");
 // Создаём экземпляр роутера для маршрутов профиля.
 const router = express.Router();
 
-// PUT  /api/profile — обновление профиля (имя, аватар).
 router.put("/", authMiddleware, profileController.updateProfile);
-// PUT  /api/profile/password — смена пароля (требует текущий пароль).
-router.put("/password", authMiddleware, profileController.changePassword);
+router.post("/password/request", authMiddleware, profileController.requestPasswordChange);
+router.post("/password/confirm", authMiddleware, profileController.confirmPasswordChange);
+router.post("/email/request", authMiddleware, profileController.requestEmailChange);
+router.post("/email/confirm", authMiddleware, profileController.confirmEmailChange);
 
 // Экспортируем роутер профиля.
 module.exports = router;

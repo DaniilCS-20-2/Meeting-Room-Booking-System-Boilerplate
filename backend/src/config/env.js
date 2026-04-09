@@ -11,6 +11,7 @@ module.exports = {
   allowedEmailDomain: process.env.ALLOWED_EMAIL_DOMAIN || "ferma.no",
   // HTTP-порт backend-сервера.
   port: Number(process.env.PORT || 4000),
-  // URL фронтенда для CORS.
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
 };

@@ -20,13 +20,15 @@ export const ProfilePage = () => {
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   // State: URL аватара (инициализируем из контекста).
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
-  // State: текущий пароль для подтверждения смены.
   const [currentPassword, setCurrentPassword] = useState("");
-  // State: новый пароль.
   const [newPassword, setNewPassword] = useState("");
-  // State: сообщение об успешном действии.
+  const [pwdCode, setPwdCode] = useState("");
+  const [pwdStep, setPwdStep] = useState("form");
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [emailStep, setEmailStep] = useState("form");
   const [msg, setMsg] = useState("");
-  // State: текст ошибки.
   const [error, setError] = useState("");
 
   // Обработчик сохранения профиля (имя + аватар).
@@ -52,30 +54,70 @@ export const ProfilePage = () => {
     }
   };
 
-  // Обработчик смены пароля.
-  const handleChangePassword = async (e) => {
-    // Предотвращаем стандартную перезагрузку страницы.
+  const handleRequestPasswordChange = async (e) => {
     e.preventDefault();
-    // Сбрасываем предыдущие сообщения.
     setError(""); setMsg("");
     try {
-      // PUT /api/profile/password — меняем пароль (требуем текущий для подтверждения).
-      await apiFetch("/profile/password", {
-        method: "PUT",
-        token,
+      await apiFetch("/profile/password/request", {
+        method: "POST", token,
         body: { currentPassword, newPassword },
       });
-      // Очищаем поля паролей.
-      setCurrentPassword(""); setNewPassword("");
-      // Показываем сообщение об успешной смене.
+      setPwdStep("code");
+      setMsg("Kode sendt til e-posten din!");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleConfirmPasswordChange = async (e) => {
+    e.preventDefault();
+    setError(""); setMsg("");
+    try {
+      await apiFetch("/profile/password/confirm", {
+        method: "POST", token,
+        body: { code: pwdCode, newPassword },
+      });
+      setCurrentPassword(""); setNewPassword(""); setPwdCode("");
+      setPwdStep("form");
       setMsg("Passord endra!");
     } catch (err) {
-      // Показываем ошибку (неверный текущий пароль и т.д.).
       setError(err.message);
     }
   };
 
   // Обработчик выхода из аккаунта.
+  const handleRequestEmailChange = async (e) => {
+    e.preventDefault();
+    setError(""); setMsg("");
+    try {
+      await apiFetch("/profile/email/request", {
+        method: "POST", token,
+        body: { newEmail, password: emailPassword },
+      });
+      setEmailStep("code");
+      setMsg("Kode sendt til den nye e-posten!");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleConfirmEmailChange = async (e) => {
+    e.preventDefault();
+    setError(""); setMsg("");
+    try {
+      await apiFetch("/profile/email/confirm", {
+        method: "POST", token,
+        body: { code: emailCode, newEmail },
+      });
+      setNewEmail(""); setEmailPassword(""); setEmailCode("");
+      setEmailStep("form");
+      await refreshUser();
+      setMsg("E-post endra!");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleLogout = () => {
     // Вызываем функцию выхода из контекста (очищает токен).
     logout();
@@ -129,23 +171,54 @@ export const ProfilePage = () => {
             <button className="btn btn--primary" type="submit">{t.profile_save}</button>
           </form>
 
-          {/* Форма смены пароля. */}
-          <form className="form-card" onSubmit={handleChangePassword}>
-            {/* Подзаголовок секции. */}
-            <h3>{t.profile_change_password}</h3>
-            {/* Поле «Текущий пароль». */}
-            <label className="form-label">{t.profile_current_password}
-              <input className="form-input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-            </label>
-            {/* Поле «Новый пароль». */}
-            <label className="form-label">{t.profile_new_password}
-              <input className="form-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-            </label>
-            {/* Кнопка сохранения нового пароля. */}
-            <button className="btn btn--primary" type="submit">{t.profile_save}</button>
-          </form>
+          {pwdStep === "form" ? (
+            <form className="form-card" onSubmit={handleRequestPasswordChange}>
+              <h3>{t.profile_change_password}</h3>
+              <label className="form-label">{t.profile_current_password}
+                <input className="form-input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+              </label>
+              <label className="form-label">{t.profile_new_password}
+                <input className="form-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+              </label>
+              <button className="btn btn--primary" type="submit">{t.profile_save}</button>
+            </form>
+          ) : (
+            <form className="form-card" onSubmit={handleConfirmPasswordChange}>
+              <h3>{t.profile_change_password}</h3>
+              <p className="form-hint">{t.profile_code_hint}</p>
+              <label className="form-label">{t.profile_code}
+                <input className="form-input" value={pwdCode} onChange={(e) => setPwdCode(e.target.value)}
+                  maxLength={6} placeholder="000000" required />
+              </label>
+              <button className="btn btn--primary" type="submit">{t.profile_confirm}</button>
+              <button className="btn btn--small" type="button" onClick={() => setPwdStep("form")}>{t.room_back}</button>
+            </form>
+          )}
 
-          {/* Кнопка выхода из аккаунта (красная, во всю ширину). */}
+          {emailStep === "form" ? (
+            <form className="form-card" onSubmit={handleRequestEmailChange}>
+              <h3>{t.profile_change_email}</h3>
+              <label className="form-label">{t.profile_new_email}
+                <input className="form-input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
+              </label>
+              <label className="form-label">{t.profile_password_for_email}
+                <input className="form-input" type="password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} required />
+              </label>
+              <button className="btn btn--primary" type="submit">{t.profile_save}</button>
+            </form>
+          ) : (
+            <form className="form-card" onSubmit={handleConfirmEmailChange}>
+              <h3>{t.profile_change_email}</h3>
+              <p className="form-hint">{t.profile_code_hint}</p>
+              <label className="form-label">{t.profile_code}
+                <input className="form-input" value={emailCode} onChange={(e) => setEmailCode(e.target.value)}
+                  maxLength={6} placeholder="000000" required />
+              </label>
+              <button className="btn btn--primary" type="submit">{t.profile_confirm}</button>
+              <button className="btn btn--small" type="button" onClick={() => setEmailStep("form")}>{t.room_back}</button>
+            </form>
+          )}
+
           <button className="btn btn--danger btn--full" type="button" onClick={handleLogout}>
             {t.profile_logout}
           </button>

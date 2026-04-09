@@ -71,8 +71,14 @@ export const t = {
   profile_change_password: "Endra passord",  // Заголовок: смена пароля.
   profile_current_password: "Noeverande passord",  // Метка: текущий пароль.
   profile_new_password: "Nytt passord",      // Метка: новый пароль.
-  profile_save: "Lagre",                     // Кнопка: сохранить.
-  profile_logout: "Logg ut",                 // Кнопка: выйти из аккаунта.
+  profile_save: "Lagre",
+  profile_logout: "Logg ut",
+  profile_code_hint: "Vi har sendt ein stadfestingskode til e-posten din.",
+  profile_code: "Stadfestingskode",
+  profile_confirm: "Stadfest",
+  profile_change_email: "Endre e-post",
+  profile_new_email: "Ny e-post",
+  profile_password_for_email: "Passord for stadfesting",
 
   // ============= Админ: страница комнаты =============
   admin_room_title_new: "Nytt rom",          // Заголовок: создание новой комнаты.

@@ -6,8 +6,8 @@ const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 // Импортируем репозиторий пользователей для работы с БД.
 const UserRepository = require("../models/userRepository");
-// Импортируем типизированную HTTP-ошибку для единообразных ответов.
 const HttpError = require("../utils/httpError");
+const { sendVerificationCode } = require("../utils/mailer");
 
 // Создаём сервис аутентификации — вся бизнес-логика авторизации.
 class AuthService {
@@ -55,9 +55,7 @@ class AuthService {
     // Сохраняем код и срок в БД.
     await UserRepository.setVerificationCode(user.id, code, expiresAt);
 
-    // В production здесь будет реальная отправка email с кодом.
-    // eslint-disable-next-line no-console
-    console.log(`[DEV] Verification code for ${email}: ${code}`);
+    await sendVerificationCode(email, code);
 
     // Выпускаем JWT access-токен для клиента.
     const token = jwt.sign(

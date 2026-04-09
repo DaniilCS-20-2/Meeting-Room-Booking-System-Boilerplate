@@ -1,37 +1,66 @@
-// Импортируем сервис профиля для делегирования бизнес-логики.
 const ProfileService = require("../services/profileService");
 
-// Контроллер обновления профиля пользователя (имя, аватар).
 const updateProfile = async (req, res, next) => {
   try {
-    // Обновляем профиль по id текущего пользователя из токена.
     const user = await ProfileService.updateProfile(req.user.id, {
       displayName: req.body.displayName,
       avatarUrl: req.body.avatarUrl,
     });
-    // Возвращаем 200 с обновлёнными данными.
     res.json({ success: true, data: user });
   } catch (err) {
-    // Передаём ошибку в глобальный обработчик.
     next(err);
   }
 };
 
-// Контроллер смены пароля пользователя.
-const changePassword = async (req, res, next) => {
+const requestPasswordChange = async (req, res, next) => {
   try {
-    // Вызываем сервис смены пароля с текущим и новым паролями.
-    const result = await ProfileService.changePassword(req.user.id, {
+    const result = await ProfileService.requestPasswordChange(req.user.id, {
       currentPassword: req.body.currentPassword,
       newPassword: req.body.newPassword,
     });
-    // Возвращаем 200 с подтверждением смены.
     res.json({ success: true, data: result });
   } catch (err) {
-    // Передаём ошибку в глобальный обработчик.
     next(err);
   }
 };
 
-// Экспортируем контроллеры профиля.
-module.exports = { updateProfile, changePassword };
+const confirmPasswordChange = async (req, res, next) => {
+  try {
+    const result = await ProfileService.confirmPasswordChange(req.user.id, {
+      code: req.body.code,
+      newPassword: req.body.newPassword,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const requestEmailChange = async (req, res, next) => {
+  try {
+    const result = await ProfileService.requestEmailChange(req.user.id, {
+      newEmail: req.body.newEmail,
+      password: req.body.password,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const confirmEmailChange = async (req, res, next) => {
+  try {
+    const result = await ProfileService.confirmEmailChange(req.user.id, {
+      code: req.body.code,
+      newEmail: req.body.newEmail,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  updateProfile, requestPasswordChange, confirmPasswordChange,
+  requestEmailChange, confirmEmailChange,
+};

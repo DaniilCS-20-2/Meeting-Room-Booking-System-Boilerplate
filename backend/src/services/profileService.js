@@ -1,48 +1,100 @@
-// Импортируем bcrypt для проверки и хеширования паролей.
 const bcrypt = require("bcryptjs");
-// Импортируем репозиторий пользователей.
 const UserRepository = require("../models/userRepository");
-// Импортируем типизированную HTTP-ошибку.
 const HttpError = require("../utils/httpError");
+const { sendVerificationCode } = require("../utils/mailer");
 
-// Создаём сервис профиля — бизнес-логика управления профилем пользователя.
 class ProfileService {
-  // Обновляем отображаемое имя и/или URL аватара.
   static async updateProfile(userId, { displayName, avatarUrl }) {
-    // Обновляем профиль через репозиторий.
     const user = await UserRepository.updateProfile(userId, { displayName, avatarUrl });
-    // Если пользователь не найден — возвращаем 404.
     if (!user) throw new HttpError(404, "User not found.");
-    // Возвращаем обновлённые данные пользователя.
     return user;
   }
 
-  // Меняем пароль пользователя (требуется текущий пароль для подтверждения).
-  static async changePassword(userId, { currentPassword, newPassword }) {
-    // Проверяем обязательность обоих полей.
+  static async requestPasswordChange(userId, { currentPassword, newPassword }) {
     if (!currentPassword || !newPassword) {
       throw new HttpError(400, "Current and new password are required.");
     }
-    // Получаем базовые данные пользователя для получения email.
     const userBasic = await UserRepository.findById(userId);
-    // Загружаем полные данные пользователя (включая password_hash).
     const user = userBasic ? await UserRepository.findByEmail(userBasic.email) : null;
-    // Если пользователь не найден — возвращаем 404.
     if (!user) throw new HttpError(404, "User not found.");
 
-    // Сравниваем введённый текущий пароль с хешем из БД.
     const valid = await bcrypt.compare(currentPassword, user.password_hash);
-    // Если текущий пароль неверный — возвращаем 400.
     if (!valid) throw new HttpError(400, "Current password is incorrect.");
 
-    // Хешируем новый пароль с cost-factor 10.
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await UserRepository.setVerificationCode(user.id, code, expiresAt);
+
+    await sendVerificationCode(user.email, code);
+
+    return { codeSent: true };
+  }
+
+  static async confirmPasswordChange(userId, { code, newPassword }) {
+    if (!code || !newPassword) {
+      throw new HttpError(400, "Code and new password are required.");
+    }
+    const userBasic = await UserRepository.findById(userId);
+    const user = userBasic ? await UserRepository.findByEmail(userBasic.email) : null;
+    if (!user) throw new HttpError(404, "User not found.");
+
+    if (!user.verification_code) throw new HttpError(400, "No verification code set.");
+    if (new Date() > new Date(user.verification_expires_at)) {
+      throw new HttpError(400, "Verification code expired.");
+    }
+    if (user.verification_code !== code) {
+      throw new HttpError(400, "Invalid verification code.");
+    }
+
     const hash = await bcrypt.hash(newPassword, 10);
-    // Сохраняем новый хеш в БД.
     await UserRepository.updatePassword(userId, hash);
-    // Возвращаем подтверждение смены пароля.
+    await UserRepository.confirmEmail(userId);
+
     return { changed: true };
+  }
+
+  static async requestEmailChange(userId, { newEmail, password }) {
+    if (!newEmail || !password) {
+      throw new HttpError(400, "New email and password are required.");
+    }
+    const userBasic = await UserRepository.findById(userId);
+    const user = userBasic ? await UserRepository.findByEmail(userBasic.email) : null;
+    if (!user) throw new HttpError(404, "User not found.");
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) throw new HttpError(400, "Password is incorrect.");
+
+    const existing = await UserRepository.findByEmail(newEmail);
+    if (existing) throw new HttpError(409, "Email already in use.");
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await UserRepository.setVerificationCode(user.id, code, expiresAt);
+
+    await sendVerificationCode(newEmail, code);
+
+    return { codeSent: true };
+  }
+
+  static async confirmEmailChange(userId, { code, newEmail }) {
+    if (!code || !newEmail) {
+      throw new HttpError(400, "Code and new email are required.");
+    }
+    const userBasic = await UserRepository.findById(userId);
+    const user = userBasic ? await UserRepository.findByEmail(userBasic.email) : null;
+    if (!user) throw new HttpError(404, "User not found.");
+
+    if (!user.verification_code) throw new HttpError(400, "No verification code set.");
+    if (new Date() > new Date(user.verification_expires_at)) {
+      throw new HttpError(400, "Verification code expired.");
+    }
+    if (user.verification_code !== code) {
+      throw new HttpError(400, "Invalid verification code.");
+    }
+
+    const updated = await UserRepository.updateEmail(userId, newEmail);
+    return { changed: true, email: updated.email };
   }
 }
 
-// Экспортируем сервис профиля для контроллеров.
 module.exports = ProfileService;
