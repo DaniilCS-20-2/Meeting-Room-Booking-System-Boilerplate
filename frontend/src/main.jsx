@@ -4,8 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 // Импортируем корневой компонент приложения.
 import App from "./App";
-// Импортируем файл Tailwind-стилей (должен быть создан в проекте сборки).
-import "./styles/tailwind.css";
+// Импортируем основной CSS-файл с читаемыми стилями интерфейса.
+import "./styles/app.css";
 
 // Находим корневой DOM-элемент приложения.
 const rootElement = document.getElementById("root");

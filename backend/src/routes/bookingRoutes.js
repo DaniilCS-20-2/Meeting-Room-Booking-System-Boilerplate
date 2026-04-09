@@ -2,16 +2,22 @@
 const express = require("express");
 // Импортируем контроллер бронирований.
 const bookingController = require("../controllers/bookingController");
-// Импортируем middleware аутентификации.
+// Импортируем middleware проверки JWT-токена.
 const authMiddleware = require("../middlewares/authMiddleware");
-// Импортируем middleware RBAC для разграничения ролей.
-const rbacMiddleware = require("../middlewares/rbacMiddleware");
 
-// Создаём роутер для API бронирований.
-const bookingRouter = express.Router();
+// Создаём экземпляр роутера для маршрутов бронирований.
+const router = express.Router();
 
-// Разрешаем создание бронирования для user и admin ролей.
-bookingRouter.post("/", authMiddleware, rbacMiddleware(["user", "admin"]), bookingController.createBooking);
+// POST   /api/bookings — создание бронирования (одиночного или recurring).
+router.post("/", authMiddleware, bookingController.createBooking);
+// GET    /api/bookings/my — бронирования текущего пользователя.
+router.get("/my", authMiddleware, bookingController.getMy);
+// GET    /api/bookings/room/:roomId — бронирования комнаты за период (для календаря).
+router.get("/room/:roomId", authMiddleware, bookingController.getByRoom);
+// GET    /api/bookings/room/:roomId/history — полная история бронирований комнаты.
+router.get("/room/:roomId/history", authMiddleware, bookingController.getHistoryByRoom);
+// PATCH  /api/bookings/:id/cancel — отмена бронирования (своё или любое для админа).
+router.patch("/:id/cancel", authMiddleware, bookingController.cancel);
 
 // Экспортируем роутер бронирований.
-module.exports = bookingRouter;
+module.exports = router;

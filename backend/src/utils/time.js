@@ -1,23 +1,8 @@
-// Создаём константу размера одного валидного слота в минутах.
-const SLOT_MINUTES = 15;
-
 // Проверяем, что объект даты валиден.
 const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
 
-// Проверяем, что дата попадает на границу 15 минут.
-const isQuarterAligned = (date) => {
-  // Проверяем валидность входной даты перед вычислениями.
-  if (!isValidDate(date)) {
-    // Возвращаем false для невалидной даты.
-    return false;
-  }
-  // Минуты должны делиться на 15 без остатка.
-  return date.getUTCMinutes() % SLOT_MINUTES === 0 && date.getUTCSeconds() === 0;
-};
-
 // Считаем длительность интервала в минутах.
 const getDurationMinutes = (startTime, endTime) => {
-  // Переводим миллисекунды в минуты.
   return (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 };
 
@@ -62,11 +47,8 @@ const generateWeeklyOccurrences = ({ startTime, endTime, weekdays, untilDate }) 
   return occurrences;
 };
 
-// Экспортируем набор утилит времени.
 module.exports = {
-  SLOT_MINUTES,
   isValidDate,
-  isQuarterAligned,
   getDurationMinutes,
   generateWeeklyOccurrences,
 };

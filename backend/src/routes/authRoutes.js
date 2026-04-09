@@ -1,15 +1,21 @@
-// Импортируем Router из Express.
+// Импортируем Router из Express для создания модульных маршрутов.
 const express = require("express");
-// Импортируем auth-контроллер.
+// Импортируем контроллер аутентификации.
 const authController = require("../controllers/authController");
+// Импортируем middleware проверки JWT-токена.
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// Создаём экземпляр роутера auth-маршрутов.
-const authRouter = express.Router();
+// Создаём экземпляр роутера для auth-маршрутов.
+const router = express.Router();
 
-// Путь регистрации пользователя.
-authRouter.post("/register", authController.register);
-// Путь логина пользователя.
-authRouter.post("/login", authController.login);
+// POST /api/auth/register — регистрация нового пользователя.
+router.post("/register", authController.register);
+// POST /api/auth/login — логин по email и паролю.
+router.post("/login", authController.login);
+// POST /api/auth/verify — подтверждение email кодом (требует JWT-токен).
+router.post("/verify", authMiddleware, authController.verifyEmail);
+// GET  /api/auth/me — получение данных текущего пользователя (требует JWT-токен).
+router.get("/me", authMiddleware, authController.me);
 
-// Экспортируем роутер auth.
-module.exports = authRouter;
+// Экспортируем роутер аутентификации.
+module.exports = router;

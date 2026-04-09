@@ -1,0 +1,480 @@
+// Импортируем React и необходимые хуки.
+import React, { useEffect, useState, useMemo } from "react";
+// Импортируем Link для навигации и useParams для параметров URL.
+import { Link, useParams } from "react-router-dom";
+// Импортируем хук аутентификации.
+import { useAuth } from "../context/AuthContext";
+// Импортируем обёртку для API-запросов.
+import { apiFetch } from "../api";
+// Импортируем объект переводов (Nynorsk).
+import { t } from "../i18n/labels";
+
+// Вспомогательная функция: генерируем массив из 7 дней начиная с указанной даты.
+// Используется для построения недельного календаря.
+const buildWeekGrid = (startDate) => {
+  // Массив для хранения 7 дней.
+  const days = [];
+  // Создаём копию начальной даты.
+  const d = new Date(startDate);
+  // Сбрасываем время на полночь.
+  d.setHours(0, 0, 0, 0);
+  // Генерируем 7 последовательных дней.
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(d);
+    // Прибавляем i дней к начальной дате.
+    day.setDate(d.getDate() + i);
+    // Добавляем день в массив.
+    days.push(day);
+  }
+  // Возвращаем массив дней.
+  return days;
+};
+
+// Массив часов от 0 до 23 для строк календаря.
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// Страница детальной информации о комнате с бронированием.
+export const RoomPage = () => {
+  // Получаем roomId из параметров URL (react-router).
+  const { roomId } = useParams();
+  // Получаем данные пользователя и токен из контекста.
+  const { user, token } = useAuth();
+
+  // State: данные комнаты.
+  const [room, setRoom] = useState(null);
+  // State: бронирования за текущую неделю (для календаря).
+  const [bookings, setBookings] = useState([]);
+  // State: полная история бронирований (для списка).
+  const [history, setHistory] = useState([]);
+  // State: комментарии к комнате.
+  const [comments, setComments] = useState([]);
+  // State: текст нового комментария.
+  const [commentText, setCommentText] = useState("");
+  // State: поля формы бронирования (начало и конец).
+  const [bookForm, setBookForm] = useState({ start: "", end: "" });
+  // State: текст ошибки.
+  const [error, setError] = useState("");
+  // State: начало текущей недели (понедельник).
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    // Вычисляем понедельник текущей недели.
+    d.setDate(d.getDate() - d.getDay() + 1);
+    return d;
+  });
+
+  const isAdmin = user?.role === "admin";
+  const [historySort, setHistorySort] = useState("time");
+
+  // Загружаем данные комнаты с сервера при монтировании или смене roomId.
+  useEffect(() => {
+    // Если нет токена — не загружаем (пользователь не авторизован).
+    if (!token) return;
+    // GET /api/rooms/:roomId — получаем детали комнаты.
+    apiFetch(`/rooms/${roomId}`, { token }).then(setRoom).catch(() => {});
+  }, [roomId, token]);
+
+  // Функция загрузки бронирований и истории для текущей комнаты.
+  const loadBookings = () => {
+    // Если нет токена — не загружаем.
+    if (!token) return;
+    // Формируем границы недели для запроса.
+    const from = weekStart.toISOString();
+    const to = new Date(weekStart.getTime() + 7 * 86400000).toISOString();
+    // GET /api/bookings/room/:id?from=...&to=... — бронирования за неделю.
+    apiFetch(`/bookings/room/${roomId}?from=${from}&to=${to}`, { token }).then(setBookings).catch(() => {});
+    // GET /api/bookings/room/:id/history — полная история.
+    apiFetch(`/bookings/room/${roomId}/history`, { token }).then(setHistory).catch(() => {});
+  };
+  // Перезагружаем при смене комнаты, токена или недели.
+  useEffect(loadBookings, [roomId, token, weekStart]);
+
+  // Функция загрузки комментариев к комнате.
+  const loadComments = () => {
+    // Если нет токена — не загружаем.
+    if (!token) return;
+    // GET /api/comments/room/:roomId — комментарии к комнате.
+    apiFetch(`/comments/room/${roomId}`, { token }).then(setComments).catch(() => {});
+  };
+  // Загружаем комментарии при монтировании.
+  useEffect(loadComments, [roomId, token]);
+
+  const freeSlots = useMemo(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+
+    const activeBookings = history
+      .filter((b) => b.status !== "cancelled" && new Date(b.end_time) > now)
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+    const endRange = new Date(now);
+    endRange.setDate(endRange.getDate() + 7);
+    endRange.setHours(23, 59, 0, 0);
+
+    const rawGaps = [];
+    let cursor = new Date(now);
+
+    for (const booking of activeBookings) {
+      const bStart = new Date(booking.start_time);
+      const bEnd = new Date(booking.end_time);
+      if (bStart > cursor) {
+        rawGaps.push({ start: new Date(cursor), end: new Date(bStart) });
+      }
+      if (bEnd > cursor) cursor = new Date(bEnd);
+    }
+    if (cursor < endRange) {
+      rawGaps.push({ start: new Date(cursor), end: new Date(endRange) });
+    }
+
+    const daySlots = [];
+    for (const gap of rawGaps) {
+      let slotStart = new Date(gap.start);
+      while (slotStart < gap.end && daySlots.length < 4) {
+        const dayEnd = new Date(slotStart);
+        dayEnd.setHours(23, 59, 0, 0);
+        const slotEnd = gap.end < dayEnd ? new Date(gap.end) : dayEnd;
+        if (slotEnd.getTime() - slotStart.getTime() >= 60000) {
+          daySlots.push({ start: new Date(slotStart), end: new Date(slotEnd) });
+        }
+        const nextDay = new Date(slotStart);
+        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setHours(0, 0, 0, 0);
+        slotStart = nextDay;
+      }
+      if (daySlots.length >= 4) break;
+    }
+
+    return daySlots;
+  }, [history]);
+
+  // Обработчик отправки формы бронирования.
+  const handleBook = async (e) => {
+    // Предотвращаем стандартную перезагрузку страницы.
+    e.preventDefault();
+    // Сбрасываем предыдущую ошибку.
+    setError("");
+    try {
+      // POST /api/bookings — создаём новое бронирование.
+      await apiFetch("/bookings", {
+        method: "POST",
+        token,
+        body: {
+          roomId,
+          startDateTime: bookForm.start,
+          endDateTime: bookForm.end,
+        },
+      });
+      // Перезагружаем бронирования после успешного создания.
+      loadBookings();
+      // Очищаем форму.
+      setBookForm({ start: "", end: "" });
+    } catch (err) {
+      // Показываем ошибку (конфликт, недопустимое время и т.д.).
+      setError(err.message);
+    }
+  };
+
+  // Обработчик отмены бронирования по id.
+  const handleCancel = async (bookingId) => {
+    try {
+      // PATCH /api/bookings/:id/cancel — отменяем бронирование.
+      await apiFetch(`/bookings/${bookingId}/cancel`, { method: "PATCH", token });
+      // Перезагружаем данные после отмены.
+      loadBookings();
+    } catch (err) {
+      // Показываем ошибку через alert.
+      alert(err.message);
+    }
+  };
+
+  // Обработчик отправки нового комментария.
+  const handleComment = async (e) => {
+    // Предотвращаем стандартную перезагрузку страницы.
+    e.preventDefault();
+    // Не отправляем пустой комментарий.
+    if (!commentText.trim()) return;
+    try {
+      // POST /api/comments/room/:roomId — создаём комментарий.
+      await apiFetch(`/comments/room/${roomId}`, {
+        method: "POST",
+        token,
+        body: { message: commentText },
+      });
+      // Очищаем поле ввода.
+      setCommentText("");
+      // Перезагружаем список комментариев.
+      loadComments();
+    } catch (err) {
+      // Показываем ошибку через alert.
+      alert(err.message);
+    }
+  };
+
+  // Обработчик удаления комментария (только для админа).
+  const handleDeleteComment = async (id) => {
+    try {
+      // DELETE /api/comments/:id — удаляем комментарий.
+      await apiFetch(`/comments/${id}`, { method: "DELETE", token });
+      // Перезагружаем список комментариев.
+      loadComments();
+    } catch (err) {
+      // Показываем ошибку через alert.
+      alert(err.message);
+    }
+  };
+
+  const toLocalInput = (date) => {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+  };
+
+  const pickSlot = (slot) => {
+    setBookForm({ start: toLocalInput(slot.start), end: toLocalInput(slot.end) });
+  };
+
+  // Генерируем массив дней для недельного календаря.
+  const weekDays = useMemo(() => buildWeekGrid(weekStart), [weekStart]);
+
+  // Проверяем, забронирован ли часовой слот (для раскраски ячейки календаря).
+  const isSlotBooked = (day, hour) => {
+    // Создаём начало часового слота.
+    const slotStart = new Date(day);
+    slotStart.setHours(hour, 0, 0, 0);
+    // Создаём конец часового слота (через 1 час).
+    const slotEnd = new Date(slotStart.getTime() + 3600000);
+    // Проверяем пересечение с любым бронированием.
+    return bookings.some((b) => {
+      const bs = new Date(b.start_time).getTime();
+      const be = new Date(b.end_time).getTime();
+      return slotStart.getTime() < be && slotEnd.getTime() > bs;
+    });
+  };
+
+  // Форматируем ISO-дату в читаемый формат (dd.MM HH:mm).
+  const formatTime = (iso) => new Date(iso).toLocaleString("nn-NO", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+
+  // Переход на предыдущую неделю.
+  const prevWeek = () => setWeekStart(new Date(weekStart.getTime() - 7 * 86400000));
+  // Переход на следующую неделю.
+  const nextWeek = () => setWeekStart(new Date(weekStart.getTime() + 7 * 86400000));
+
+  // Пока данные комнаты не загружены — показываем индикатор загрузки.
+  if (!room) return <div className="page">Lastar...</div>;
+
+  const now = new Date();
+  const futureBookings = history
+    .filter((b) => new Date(b.end_time) > now && b.status !== "cancelled")
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  const pastBookings = history
+    .filter((b) => new Date(b.end_time) <= now || b.status === "cancelled")
+    .sort((a, b) => {
+      if (a.status === "cancelled" && b.status !== "cancelled") return 1;
+      if (a.status !== "cancelled" && b.status === "cancelled") return -1;
+      if (historySort === "activity") return new Date(b.created_at) - new Date(a.created_at);
+      return new Date(b.start_time) - new Date(a.start_time);
+    });
+
+  return (
+    <section className="page">
+      {/* Кнопка «Назад» — возврат на главную. */}
+      <Link className="btn btn--small" to="/">{t.room_back}</Link>
+
+      {/* Верхняя секция: фото комнаты слева + бронирование справа. */}
+      <div className="room-top">
+        {/* Фото комнаты. */}
+        <div className="room-top__photo">
+          {room.photo_url
+            ? <img src={room.photo_url} alt={room.name} className="room-top__img" />
+            : <div className="room-top__placeholder" />}
+        </div>
+
+        {/* Блок бронирования и информации. */}
+        <div className="room-top__booking">
+          {/* Название комнаты. */}
+          <h1 className="room-page__title">{room.name}</h1>
+
+          {/* 4 ближайших свободных слота — кликабельные кнопки. */}
+          <p className="room-top__label">{t.room_next_free}</p>
+          <div className="room-slots">
+            {freeSlots.map((slot, i) => (
+              <button key={i} type="button" className="btn btn--slot" onClick={() => pickSlot(slot)}>
+                <span className="btn--slot__date">
+                  {slot.start.toLocaleDateString("nn-NO", { day: "numeric", month: "short" })}
+                </span>
+                <span className="btn--slot__time">
+                  {slot.start.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                  {" - "}
+                  {slot.end.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Форма выбора произвольного времени бронирования. */}
+          <form className="room-book-form" onSubmit={handleBook}>
+            {/* Поле «От» — начало бронирования. */}
+            <label className="form-label">{t.room_from}
+              <input className="form-input" type="datetime-local" value={bookForm.start}
+                onChange={(e) => setBookForm((p) => ({ ...p, start: e.target.value }))} required />
+            </label>
+            <label className="form-label">{t.room_to}
+              <input className="form-input" type="datetime-local" value={bookForm.end}
+                onChange={(e) => setBookForm((p) => ({ ...p, end: e.target.value }))} required />
+            </label>
+            {isAdmin && (room.min_booking_minutes != null || room.max_booking_minutes != null) && (
+              <p className="duration-hint">
+                {room.min_booking_minutes != null && (
+                  <span>{t.room_duration_hint_min}: {room.min_booking_minutes} {t.room_duration_hint_min_unit}</span>
+                )}
+                {room.min_booking_minutes != null && room.max_booking_minutes != null && <span> · </span>}
+                {room.max_booking_minutes != null && (
+                  <span>{t.room_duration_hint_max}: {room.max_booking_minutes} {t.room_duration_hint_min_unit}</span>
+                )}
+              </p>
+            )}
+            {error && <p className="error-text">{error}</p>}
+            <button className="btn btn--primary" type="submit">{t.room_book_btn}</button>
+          </form>
+
+          {/* Информация о комнате: вместимость, оборудование, описание. */}
+          <div className="room-info">
+            <p><strong>{t.room_capacity}:</strong> {room.capacity}</p>
+            {room.equipment && <p><strong>{t.room_equipment}:</strong> {room.equipment}</p>}
+            {room.description && <p>{room.description}</p>}
+          </div>
+
+          {/* Кнопка редактирования — только для админа. */}
+          {isAdmin && (
+            <div className="room-admin-actions">
+              <Link className="btn btn--small" to={`/admin/rooms/${room.id}/edit`}>{t.room_edit}</Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Недельный календарь ---- */}
+      <h2 className="section-title">{t.room_calendar}</h2>
+      {/* Навигация по неделям: стрелки влево/вправо. */}
+      <div className="calendar-nav">
+        <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
+        {/* Диапазон дат текущей недели. */}
+        <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
+        <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+      </div>
+      {/* Сетка календаря: дни × часы. */}
+      <div className="calendar-grid">
+        {/* Заголовок: названия дней недели. */}
+        <div className="calendar-grid__header">
+          <div className="calendar-grid__corner"></div>
+          {weekDays.map((d) => (
+            <div key={d.toISOString()} className="calendar-grid__day-label">
+              {/* Форматируем: короткий день + число. */}
+              {d.toLocaleDateString("nn-NO", { weekday: "short", day: "numeric" })}
+            </div>
+          ))}
+        </div>
+        {/* Тело: строка на каждый час с ячейками на каждый день. */}
+        <div className="calendar-grid__body">
+          {HOURS.map((h) => (
+            <div key={h} className="calendar-grid__row">
+              {/* Метка часа в левом столбце. */}
+              <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
+              {/* Ячейки дней: красим, если есть бронирование. */}
+              {weekDays.map((d) => {
+                const booked = isSlotBooked(d, h);
+                return (
+                  <div key={d.toISOString() + h}
+                    className={`calendar-grid__cell ${booked ? "calendar-grid__cell--booked" : ""}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ---- Нижняя секция: история бронирований + комментарии ---- */}
+      <div className="room-bottom">
+        {/* Левая половина: история бронирований. */}
+        <div className="room-bottom__history">
+          <h2 className="section-title">{t.room_history}</h2>
+          {/* Будущие бронирования (сверху). */}
+          {futureBookings.length > 0 && (
+            <>
+              <h3 className="subsection-title">Komande</h3>
+              {futureBookings.map((b) => (
+                <div key={b.id} className="history-item">
+                  {/* Время начала и окончания. */}
+                  <span>{formatTime(b.start_time)} - {formatTime(b.end_time)}</span>
+                  {/* Имя автора бронирования. */}
+                  <span className="history-item__user">{b.user_name}</span>
+                  {/* Кнопка отмены: доступна автору или админу. */}
+                  {(b.user_id === user.id || isAdmin) && (
+                    <button type="button" className="btn btn--small btn--danger" onClick={() => handleCancel(b.id)}>
+                      {t.room_cancel_booking}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+          {pastBookings.length > 0 && (
+            <>
+              <div className="history-header">
+                <h3 className="subsection-title">Tidlegare</h3>
+                <div className="history-sort">
+                  <button type="button"
+                    className={`btn btn--tiny ${historySort === "time" ? "btn--active" : ""}`}
+                    onClick={() => setHistorySort("time")}>{t.room_sort_time}</button>
+                  <button type="button"
+                    className={`btn btn--tiny ${historySort === "activity" ? "btn--active" : ""}`}
+                    onClick={() => setHistorySort("activity")}>{t.room_sort_activity}</button>
+                </div>
+              </div>
+              {pastBookings.map((b) => (
+                <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
+                  <span>{formatTime(b.start_time)} - {formatTime(b.end_time)}</span>
+                  <span className="history-item__user">{b.user_name}</span>
+                  <span className="history-item__status">{b.status}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Правая половина: комментарии к комнате. */}
+        <div className="room-bottom__comments">
+          <h2 className="section-title">{t.room_comments}</h2>
+          {/* Форма добавления нового комментария. */}
+          <form className="comment-form" onSubmit={handleComment}>
+            {/* Поле ввода текста комментария. */}
+            <input className="form-input" placeholder={t.room_comment_placeholder} value={commentText}
+              onChange={(e) => setCommentText(e.target.value)} />
+            {/* Кнопка «Отправить». */}
+            <button className="btn btn--primary btn--small" type="submit">{t.room_comment_send}</button>
+          </form>
+          {/* Список комментариев (новые сверху). */}
+          <div className="comments-list">
+            {comments.map((c) => (
+              <div key={c.id} className="comment-item">
+                {/* Заголовок: имя автора, дата, кнопка удаления (для админа). */}
+                <div className="comment-item__header">
+                  <strong>{c.user_name}</strong>
+                  <span className="comment-item__date">{new Date(c.created_at).toLocaleString("nn-NO")}</span>
+                  {/* Кнопка удаления комментария — только для админа. */}
+                  {isAdmin && (
+                    <button type="button" className="btn btn--tiny btn--danger" onClick={() => handleDeleteComment(c.id)}>×</button>
+                  )}
+                </div>
+                {/* Текст комментария. */}
+                <p className="comment-item__text">{c.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};

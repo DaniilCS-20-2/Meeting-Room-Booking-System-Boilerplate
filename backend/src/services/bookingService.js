@@ -1,48 +1,44 @@
-// Импортируем встроенный модуль crypto для генерации UUID группы повторений.
 const crypto = require("crypto");
-// Импортируем репозиторий работы с бронированиями.
 const BookingRepository = require("../models/bookingRepository");
-// Импортируем специализированную HTTP-ошибку.
+const RoomRepository = require("../models/roomRepository");
 const HttpError = require("../utils/httpError");
-// Импортируем утилиты работы со временем и recurring.
 const {
-  SLOT_MINUTES,
   isValidDate,
-  isQuarterAligned,
   getDurationMinutes,
   generateWeeklyOccurrences,
 } = require("../utils/time");
 
 // Создаём сервис бизнес-логики бронирований.
 class BookingService {
-  // Валидируем базовый слот и возвращаем нормализованные даты.
   static validateBaseSlot(startDateTime, endDateTime) {
-    // Преобразуем входные строки/даты в Date-объекты.
     const startTime = new Date(startDateTime);
     const endTime = new Date(endDateTime);
 
-    // Проверяем валидность дат.
     if (!isValidDate(startTime) || !isValidDate(endTime)) {
-      // Возвращаем 400 для некорректных параметров времени.
       throw new HttpError(400, "Invalid startDateTime or endDateTime.");
     }
 
-    // Проверяем, что обе даты стоят на 15-минутной сетке.
-    if (!isQuarterAligned(startTime) || !isQuarterAligned(endTime)) {
-      // Требуем соблюдение шага в 15 минут по бизнес-правилу.
-      throw new HttpError(400, `Time must be aligned to ${SLOT_MINUTES}-minute slots.`);
+    if (startTime < new Date()) {
+      throw new HttpError(400, "Cannot create bookings in the past.");
     }
 
-    // Вычисляем длительность интервала в минутах.
     const durationMinutes = getDurationMinutes(startTime, endTime);
-    // Проверяем минимальную длительность и положительный диапазон.
-    if (durationMinutes < SLOT_MINUTES) {
-      // Запрещаем слоты короче 15 минут.
-      throw new HttpError(400, "Booking duration must be at least 15 minutes.");
+    if (durationMinutes < 1) {
+      throw new HttpError(400, "End time must be after start time.");
     }
 
-    // Возвращаем нормализованные даты для последующей логики.
-    return { startTime, endTime };
+    return { startTime, endTime, durationMinutes };
+  }
+
+  static validateDurationLimits(durationMinutes, room) {
+    const min = room.min_booking_minutes;
+    const max = room.max_booking_minutes;
+    if (min != null && durationMinutes < min) {
+      throw new HttpError(400, `Booking must be at least ${min} minutes for this room.`);
+    }
+    if (max != null && durationMinutes > max) {
+      throw new HttpError(400, `Booking cannot exceed ${max} minutes for this room.`);
+    }
   }
 
   // Валидируем параметры recurring и генерируем вхождения.
@@ -102,17 +98,17 @@ class BookingService {
     }));
   }
 
-  // Создаём одно или серию бронирований атомарно.
   static async createBooking({ userId, roomId, startDateTime, endDateTime, recurring, comment }) {
-    // Проверяем наличие обязательных полей.
     if (!userId || !roomId) {
-      // Возвращаем 400 при отсутствии roomId/userId.
       throw new HttpError(400, "userId and roomId are required.");
     }
 
-    // Валидируем первый слот и получаем даты.
-    const { startTime, endTime } = BookingService.validateBaseSlot(startDateTime, endDateTime);
-    // Собираем итоговый список вхождений с учётом recurring.
+    const room = await RoomRepository.findById(roomId);
+    if (!room) throw new HttpError(404, "Room not found.");
+
+    const { startTime, endTime, durationMinutes } = BookingService.validateBaseSlot(startDateTime, endDateTime);
+    BookingService.validateDurationLimits(durationMinutes, room);
+
     const occurrences = BookingService.buildOccurrences({ startTime, endTime, recurring });
 
     // Выполняем все вставки в одной транзакции.

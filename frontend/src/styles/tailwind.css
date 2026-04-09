@@ -1,6 +1,0 @@
-/* Подключаем базовые стили Tailwind (требует настроенного PostCSS/Tailwind pipeline). */
-@tailwind base;
-/* Подключаем компонентный слой Tailwind. */
-@tailwind components;
-/* Подключаем утилитарный слой Tailwind. */
-@tailwind utilities;
