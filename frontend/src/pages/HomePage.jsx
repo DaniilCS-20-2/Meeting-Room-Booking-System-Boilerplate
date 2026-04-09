@@ -6,8 +6,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 // Импортируем обёртку для API-запросов к backend.
 import { apiFetch } from "../api";
-// Импортируем объект переводов (Nynorsk).
 import { t } from "../i18n/labels";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 // Главная страница приложения.
 export const HomePage = () => {
@@ -15,8 +15,8 @@ export const HomePage = () => {
   const { user, token, logout } = useAuth();
   // Получаем функцию программной навигации.
   const navigate = useNavigate();
-  // Локальный state для списка комнат, загруженных с сервера.
   const [rooms, setRooms] = useState([]);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Загружаем список комнат с сервера, если пользователь авторизован.
   useEffect(() => {
@@ -51,40 +51,45 @@ export const HomePage = () => {
   // Берём первую букву имени для отображения в кружке аватара.
   const initials = (user.display_name || user.email || "U").charAt(0).toUpperCase();
 
-  // Обработчик удаления комнаты (только для админа).
-  const handleDelete = async (roomId) => {
-    // Запрашиваем подтверждение у пользователя перед удалением.
-    if (!confirm("Slett dette rommet?")) return;
-    try {
-      // Отправляем DELETE /api/rooms/:id на сервер.
-      await apiFetch(`/rooms/${roomId}`, { method: "DELETE", token });
-      // Удаляем комнату из локального state без перезагрузки.
-      setRooms((prev) => prev.filter((r) => r.id !== roomId));
-    } catch (err) {
-      // Показываем ошибку пользователю через alert.
-      alert(err.message);
-    }
+  const handleDelete = (roomId, roomName) => {
+    setConfirmAction({
+      title: "Slett rom",
+      text: `Er du sikker på at du vil slette «${roomName}»? Alle bookingar blir sletta.`,
+      action: async () => {
+        try {
+          await apiFetch(`/rooms/${roomId}`, { method: "DELETE", token });
+          setRooms((prev) => prev.filter((r) => r.id !== roomId));
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
   };
 
   return (
     <section className="home-page page">
-      {/* Верхняя строка: админ-кнопки слева, аватар пользователя справа. */}
       <div className="home-topbar">
-        {/* Кнопки управления показываются только админу. */}
-        {isAdmin && (
-          <div className="home-topbar__admin">
-            {/* Кнопка «Legg til rom» — создание новой комнаты. */}
-            <Link className="home-btn home-btn--primary" to="/admin/rooms/new">{t.room_add}</Link>
-            {/* Кнопка «Administrer brukarar» — управление пользователями. */}
-            <Link className="home-btn home-btn--ghost" to="/admin/users">{t.room_manage_users}</Link>
-          </div>
-        )}
-        {/* Блок аватара пользователя — кликабельный, ведёт в профиль. */}
-        <div className="home-topbar__user">
+        <div className="home-topbar__right">
+          {isAdmin && (
+            <>
+              <Link className="home-btn home-btn--primary" to="/admin/rooms/new">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{marginRight: 4, verticalAlign: "middle"}}>
+                  <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                {t.room_add}
+              </Link>
+              <Link className="home-btn home-btn--ghost" to="/admin/users">
+                <svg width="18" height="16" viewBox="0 0 24 20" fill="currentColor" style={{marginRight: 4, verticalAlign: "middle"}}>
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                {t.room_manage_users}
+              </Link>
+            </>
+          )}
           <button type="button" className="avatar-btn" onClick={() => navigate("/profile")}>
-            {/* Если есть URL аватара — показываем фото, иначе — инициалы. */}
             {user.avatar_url
-              ? <img src={user.avatar_url} alt="" className="avatar-btn__img" />
+              ? <img src={user.avatar_url.startsWith("/uploads") ? `http://localhost:4000${user.avatar_url}` : user.avatar_url} alt="" className="avatar-btn__img" />
               : <span className="avatar-btn__initials">{initials}</span>}
           </button>
         </div>
@@ -120,9 +125,12 @@ export const HomePage = () => {
               {/* Кликабельная ссылка на страницу комнаты. */}
               <Link to={`/rooms/${room.id}`} className="home-card__link">
                 {/* Фото комнаты или пустой placeholder. */}
-                {room.photo_url
-                  ? <img src={room.photo_url} alt={room.name} className="home-card__media-img" />
-                  : <div className="home-card__media" />}
+                {(() => {
+                  const cover = (room.photos && room.photos[0]) || room.photo_url;
+                  if (!cover) return <div className="home-card__media" />;
+                  const src = cover.startsWith("/uploads") ? `http://localhost:4000${cover}` : cover;
+                  return <img src={src} alt={room.name} className="home-card__media-img" />;
+                })()}
                 {/* Название комнаты. */}
                 <h3 className="home-card__title">{room.name}</h3>
                 {/* Краткое описание. */}
@@ -141,13 +149,21 @@ export const HomePage = () => {
                   {/* Кнопка «Rediger» ведёт на страницу редактирования комнаты. */}
                   <Link className="btn btn--small" to={`/admin/rooms/${room.id}/edit`}>{t.room_edit}</Link>
                   {/* Кнопка «Slett» удаляет комнату с подтверждением. */}
-                  <button type="button" className="btn btn--small btn--danger" onClick={() => handleDelete(room.id)}>{t.room_delete}</button>
+                  <button type="button" className="btn btn--small btn--danger" onClick={() => handleDelete(room.id, room.name)}>{t.room_delete}</button>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          text={confirmAction.text}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </section>
   );
 };

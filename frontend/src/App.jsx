@@ -36,7 +36,7 @@ const AvatarMenu = () => {
       <button type="button" className="avatar-menu__btn" onClick={() => setOpen(!open)}>
         {/* Если есть URL аватара — показываем фото, иначе — инициалы. */}
         {user.avatar_url
-          ? <img src={user.avatar_url} alt="" className="avatar-menu__img" />
+          ? <img src={user.avatar_url.startsWith("/uploads") ? `http://localhost:4000${user.avatar_url}` : user.avatar_url} alt="" className="avatar-menu__img" />
           : <span className="avatar-menu__initials">{initials}</span>}
       </button>
       {/* Выпадающее меню отображается только при open === true. */}
@@ -75,17 +75,24 @@ const AppLayout = () => {
       {/* Навигация скрыта на главной и auth-страницах — у них своя шапка. */}
       {!isHome && !isAuth && (
         <nav className="top-nav">
-          {/* Ссылка на главную страницу — всегда видна. */}
-          <Link className="top-nav__link" to="/">{t.nav_home}</Link>
-          {/* Ссылки админ-панели — видны только для роли admin. */}
-          {user && user.role === "admin" && (
-            <>
-              <Link className="top-nav__link" to="/admin/rooms/new">{t.nav_admin_rooms}</Link>
-              <Link className="top-nav__link" to="/admin/users">{t.nav_admin_users}</Link>
-            </>
-          )}
-          {/* Аватар-меню прижимаем вправо через marginLeft: auto. */}
-          <div style={{ marginLeft: "auto" }}>
+          <Link className="home-btn home-btn--ghost" to="/">{t.nav_home}</Link>
+          <div className="top-nav__right">
+            {user && user.role === "admin" && (
+              <>
+                <Link className="home-btn home-btn--primary" to="/admin/rooms/new">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{marginRight: 4, verticalAlign: "middle"}}>
+                    <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  {t.room_add}
+                </Link>
+                <Link className="home-btn home-btn--ghost" to="/admin/users">
+                  <svg width="18" height="16" viewBox="0 0 24 20" fill="currentColor" style={{marginRight: 4, verticalAlign: "middle"}}>
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                  </svg>
+                  {t.room_manage_users}
+                </Link>
+              </>
+            )}
             <AvatarMenu />
           </div>
         </nav>

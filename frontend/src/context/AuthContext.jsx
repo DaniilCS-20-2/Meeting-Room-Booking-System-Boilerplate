@@ -59,27 +59,23 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  // Функция регистрации: отправляет email, пароль и имя.
   const register = async (email, password, displayName) => {
-    // Отправляем POST /api/auth/register с данными формы.
     const data = await apiFetch("/auth/register", {
       method: "POST",
       body: { email, password, displayName },
     });
-    // Сохраняем токен в localStorage.
-    localStorage.setItem("token", data.token);
-    // Обновляем state токена.
-    setToken(data.token);
-    // Сохраняем данные пользователя.
-    setUser(data.user);
-    // Возвращаем данные (включая флаг verificationRequired).
     return data;
   };
 
-  // Функция подтверждения email по 6-значному коду.
-  const verifyEmail = async (code) => {
-    // Отправляем POST /api/auth/verify с кодом верификации.
-    return apiFetch("/auth/verify", { method: "POST", body: { code }, token });
+  const verifyEmail = async (pendingToken, code) => {
+    const data = await apiFetch("/auth/verify", {
+      method: "POST",
+      body: { pendingToken, code },
+    });
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data;
   };
 
   // Функция выхода: удаляет токен и сбрасывает данные пользователя.

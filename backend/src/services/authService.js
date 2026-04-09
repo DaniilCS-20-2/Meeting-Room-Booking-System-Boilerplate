@@ -1,98 +1,88 @@
-// Импортируем bcrypt для безопасного хеширования паролей.
 const bcrypt = require("bcryptjs");
-// Импортируем jwt для генерации и верификации токенов аутентификации.
 const jwt = require("jsonwebtoken");
-// Импортируем конфигурацию приложения.
 const env = require("../config/env");
-// Импортируем репозиторий пользователей для работы с БД.
 const UserRepository = require("../models/userRepository");
 const HttpError = require("../utils/httpError");
 const { sendVerificationCode } = require("../utils/mailer");
 
-// Создаём сервис аутентификации — вся бизнес-логика авторизации.
-class AuthService {
-  // Проверяем, что email принадлежит разрешённому корпоративному домену.
-  static validateEmailDomain(email) {
-    // Выделяем доменную часть email после символа @.
-    const domain = String(email).split("@")[1]?.toLowerCase();
-    // Сравниваем домен с разрешённым из конфигурации.
-    if (!domain || domain !== env.allowedEmailDomain.toLowerCase()) {
-      // Возвращаем 400, если домен не совпадает.
-      throw new HttpError(400, `Email domain must be ${env.allowedEmailDomain}.`);
-    }
-  }
+const pendingRegistrations = new Map();
 
-  // Регистрируем нового пользователя.
+class AuthService {
   static async register({ email, password, displayName }) {
-    // Проверяем обязательность полей email и password.
     if (!email || !password) {
       throw new HttpError(400, "Email and password are required.");
     }
-    // Валидируем доменную часть email.
-    AuthService.validateEmailDomain(email);
 
-    // Проверяем, не занят ли этот email другим пользователем.
     const existing = await UserRepository.findByEmail(email);
-    // Если пользователь уже существует — возвращаем 409 Conflict.
     if (existing) {
       throw new HttpError(409, "User with this email already exists.");
     }
 
-    // Хешируем пароль с cost-factor 10 через bcrypt.
     const passwordHash = await bcrypt.hash(password, 10);
-    // Создаём запись пользователя в БД.
-    const user = await UserRepository.createUser({
-      email,
-      displayName: displayName || "",
-      passwordHash,
-      role: "user",
-    });
-
-    // Генерируем случайный 6-значный код верификации email.
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    // Устанавливаем срок действия кода — 15 минут.
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    // Сохраняем код и срок в БД.
-    await UserRepository.setVerificationCode(user.id, code, expiresAt);
+
+    pendingRegistrations.set(email.toLowerCase(), {
+      email, displayName: displayName || "", passwordHash, code, expiresAt,
+    });
 
     await sendVerificationCode(email, code);
 
-    // Выпускаем JWT access-токен для клиента.
+    const pendingToken = jwt.sign(
+      { email: email.toLowerCase(), type: "pending_registration" },
+      env.jwtSecret,
+      { expiresIn: "15m" }
+    );
+
+    return { pendingToken, verificationRequired: true };
+  }
+
+  static async verifyEmail({ pendingToken, code }) {
+    let payload;
+    try {
+      payload = jwt.verify(pendingToken, env.jwtSecret);
+    } catch {
+      throw new HttpError(400, "Invalid or expired token.");
+    }
+    if (payload.type !== "pending_registration") {
+      throw new HttpError(400, "Invalid token type.");
+    }
+
+    const emailKey = payload.email;
+    const pending = pendingRegistrations.get(emailKey);
+    if (!pending) throw new HttpError(400, "No pending registration found. Please register again.");
+
+    if (new Date() > pending.expiresAt) {
+      pendingRegistrations.delete(emailKey);
+      throw new HttpError(400, "Verification code expired. Please register again.");
+    }
+    if (pending.code !== code) {
+      throw new HttpError(400, "Invalid verification code.");
+    }
+
+    const existingAgain = await UserRepository.findByEmail(pending.email);
+    if (existingAgain) {
+      pendingRegistrations.delete(emailKey);
+      throw new HttpError(409, "User with this email already exists.");
+    }
+
+    const isAdmin = env.adminEmails.includes(pending.email.toLowerCase());
+    const user = await UserRepository.createUser({
+      email: pending.email,
+      displayName: pending.displayName,
+      passwordHash: pending.passwordHash,
+      role: isAdmin ? "admin" : "user",
+    });
+    await UserRepository.confirmEmail(user.id);
+    pendingRegistrations.delete(emailKey);
+
     const token = jwt.sign(
       { sub: user.id, role: user.role, email: user.email },
       env.jwtSecret,
       { expiresIn: "12h" }
     );
 
-    // Возвращаем пользователя, токен и флаг необходимости верификации.
-    return { user, token, verificationRequired: true };
-  }
-
-  // Подтверждаем email по 6-значному коду верификации.
-  static async verifyEmail({ userId, code }) {
-    // Получаем полные данные пользователя с кодом верификации.
-    const userBasic = await UserRepository.findById(userId);
-    // Проверяем, что пользователь существует.
-    const user = userBasic ? await UserRepository.findByEmail(userBasic.email) : null;
-    // Если пользователь не найден — возвращаем 404.
-    if (!user) throw new HttpError(404, "User not found.");
-    // Если email уже подтверждён — сообщаем об этом.
-    if (user.email_verified) throw new HttpError(400, "Email already verified.");
-    // Если код не установлен — ошибка.
-    if (!user.verification_code) throw new HttpError(400, "No verification code set.");
-    // Проверяем, не истёк ли срок действия кода.
-    if (new Date() > new Date(user.verification_expires_at)) {
-      throw new HttpError(400, "Verification code expired.");
-    }
-    // Сравниваем введённый код с сохранённым.
-    if (user.verification_code !== code) {
-      throw new HttpError(400, "Invalid verification code.");
-    }
-
-    // Подтверждаем email и очищаем код.
-    await UserRepository.confirmEmail(user.id);
-    // Возвращаем флаг успешной верификации.
-    return { verified: true };
+    return { user, token, verified: true };
   }
 
   // Выполняем логин пользователя по email и паролю.
@@ -106,12 +96,13 @@ class AuthService {
     // Если не найден — возвращаем обезличенную ошибку 401.
     if (!user) throw new HttpError(401, "Invalid credentials.");
 
-    // Сравниваем введённый пароль с хешем через bcrypt.
     const valid = await bcrypt.compare(password, user.password_hash);
-    // При неверном пароле — тоже 401 (не раскрываем, что именно неправильно).
     if (!valid) throw new HttpError(401, "Invalid credentials.");
 
-    // Формируем JWT после успешной проверки.
+    if (!user.email_verified) {
+      throw new HttpError(403, "Email not verified. Please register again.");
+    }
+
     const token = jwt.sign(
       { sub: user.id, role: user.role, email: user.email },
       env.jwtSecret,
@@ -132,13 +123,12 @@ class AuthService {
     };
   }
 
-  // Получаем данные текущего пользователя по id из токена.
   static async me(userId) {
-    // Ищем пользователя по id.
     const user = await UserRepository.findById(userId);
-    // Если не найден — возвращаем 404.
     if (!user) throw new HttpError(404, "User not found.");
-    // Возвращаем публичные данные пользователя.
+    if (!user.email_verified) {
+      throw new HttpError(403, "Email not verified.");
+    }
     return user;
   }
 }

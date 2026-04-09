@@ -1,25 +1,17 @@
-// Импортируем React и хук useState.
-import React, { useState } from "react";
-// Импортируем useNavigate для программных переходов.
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// Импортируем хук аутентификации.
 import { useAuth } from "../context/AuthContext";
-// Импортируем обёртку для API-запросов.
-import { apiFetch } from "../api";
-// Импортируем объект переводов (Nynorsk).
+import { apiFetch, apiUpload } from "../api";
 import { t } from "../i18n/labels";
 
-// Страница профиля пользователя — настройки аккаунта.
-export const ProfilePage = () => {
-  // Получаем данные пользователя, токен, функции выхода и обновления из контекста.
-  const { user, token, logout, refreshUser } = useAuth();
-  // Получаем функцию программной навигации.
-  const navigate = useNavigate();
+const API_BASE = "http://localhost:4000";
 
-  // State: отображаемое имя пользователя (инициализируем из контекста).
+export const ProfilePage = () => {
+  const { user, token, logout, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const fileRef = useRef(null);
+
   const [displayName, setDisplayName] = useState(user?.display_name || "");
-  // State: URL аватара (инициализируем из контекста).
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [pwdCode, setPwdCode] = useState("");
@@ -28,28 +20,39 @@ export const ProfilePage = () => {
   const [emailPassword, setEmailPassword] = useState("");
   const [emailCode, setEmailCode] = useState("");
   const [emailStep, setEmailStep] = useState("form");
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  // Обработчик сохранения профиля (имя + аватар).
+  const handleAvatarClick = () => fileRef.current?.click();
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(""); setMsg(""); setUploading(true);
+    try {
+      await apiUpload("/profile/avatar", { file, fieldName: "avatar", token });
+      await refreshUser();
+      setMsg("Profilbilete oppdatert!");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSaveProfile = async (e) => {
-    // Предотвращаем стандартную перезагрузку страницы.
     e.preventDefault();
-    // Сбрасываем предыдущие сообщения.
     setError(""); setMsg("");
     try {
-      // PUT /api/profile — обновляем имя и аватар.
       await apiFetch("/profile", {
-        method: "PUT",
-        token,
-        body: { displayName, avatarUrl: avatarUrl || null },
+        method: "PUT", token,
+        body: { displayName },
       });
-      // Перезагружаем данные пользователя в контексте.
       await refreshUser();
-      // Показываем сообщение об успехе.
       setMsg("Lagra!");
     } catch (err) {
-      // Показываем ошибку от сервера.
       setError(err.message);
     }
   };
@@ -85,7 +88,6 @@ export const ProfilePage = () => {
     }
   };
 
-  // Обработчик выхода из аккаунта.
   const handleRequestEmailChange = async (e) => {
     e.preventDefault();
     setError(""); setMsg("");
@@ -118,56 +120,45 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Вызываем функцию выхода из контекста (очищает токен).
-    logout();
-    // Перенаправляем на главную страницу.
-    navigate("/");
-  };
+  const handleLogout = () => { logout(); navigate("/"); };
 
-  // Если пользователь не загружен — ничего не рендерим.
   if (!user) return null;
 
-  // Берём первую букву имени для отображения в placeholder аватара.
   const initials = (user.display_name || user.email || "U").charAt(0).toUpperCase();
+  const avatarSrc = user.avatar_url?.startsWith("/uploads")
+    ? `${API_BASE}${user.avatar_url}`
+    : user.avatar_url;
 
   return (
     <section className="page page--narrow">
-      {/* Заголовок страницы профиля. */}
       <h1 className="page__title">{t.profile_title}</h1>
 
-      {/* Сообщение об успехе (зелёное). */}
       {msg && <p className="success-text">{msg}</p>}
-      {/* Сообщение об ошибке (красное). */}
       {error && <p className="error-text">{error}</p>}
 
-      {/* Layout: аватар слева, формы справа. */}
       <div className="profile-layout">
-        {/* Аватар пользователя. */}
-        <div className="profile-avatar">
-          {/* Если есть URL — показываем фото, иначе — инициалы. */}
-          {user.avatar_url
-            ? <img src={user.avatar_url} alt="" className="profile-avatar__img" />
+        <div className="profile-avatar profile-avatar--clickable" onClick={handleAvatarClick} title="Klikk for å endre bilete">
+          {avatarSrc
+            ? <img src={avatarSrc} alt="" className="profile-avatar__img" />
             : <div className="profile-avatar__placeholder">{initials}</div>}
+          <div className="profile-avatar__overlay">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" fill="#fff"/>
+              <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" stroke="#fff" strokeWidth="1.5" fill="none"/>
+            </svg>
+          </div>
+          {uploading && <div className="profile-avatar__loading">...</div>}
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
         </div>
 
-        {/* Формы настроек. */}
         <div className="profile-forms">
-          {/* Форма обновления профиля (имя, email, аватар). */}
           <form className="form-card" onSubmit={handleSaveProfile}>
-            {/* Поле «Имя». */}
             <label className="form-label">{t.profile_name}
               <input className="form-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </label>
-            {/* Поле «Email» — только для чтения (disabled). */}
             <label className="form-label">{t.profile_email}
               <input className="form-input" value={user.email} disabled />
             </label>
-            {/* Поле «URL аватара». */}
-            <label className="form-label">{t.profile_avatar} (URL)
-              <input className="form-input" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
-            </label>
-            {/* Кнопка сохранения профиля. */}
             <button className="btn btn--primary" type="submit">{t.profile_save}</button>
           </form>
 

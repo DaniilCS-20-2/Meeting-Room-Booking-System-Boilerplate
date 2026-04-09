@@ -1,7 +1,6 @@
-// Импортируем Express для создания HTTP-приложения.
 const express = require("express");
-// Импортируем CORS для разрешения кросс-доменных запросов с фронтенда.
 const cors = require("cors");
+const path = require("path");
 // Импортируем конфигурацию окружения.
 const env = require("./config/env");
 
@@ -26,8 +25,8 @@ const app = express();
 
 // Разрешаем CORS-запросы с URL фронтенда (из конфигурации).
 app.use(cors({ origin: env.frontendUrl, credentials: true }));
-// Подключаем JSON-парсер для разбора тела запросов.
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Простейший healthcheck для мониторинга состояния сервиса.
 app.get("/health", (_req, res) => {

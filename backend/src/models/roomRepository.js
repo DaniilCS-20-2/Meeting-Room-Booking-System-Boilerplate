@@ -9,7 +9,7 @@ class RoomRepository {
     const where = includeDisabled ? "" : "WHERE is_disabled = FALSE";
     // Формируем SELECT-запрос со всеми полями комнаты.
     const { rows } = await pool.query(
-      `SELECT id, name, location, capacity, description, equipment, photo_url,
+      `SELECT id, name, location, capacity, description, equipment, photo_url, photos,
               min_booking_minutes, max_booking_minutes, status, is_disabled,
               created_at, updated_at
        FROM rooms ${where}
@@ -23,7 +23,7 @@ class RoomRepository {
   static async findById(id) {
     // Формируем SELECT-запрос по первичному ключу.
     const { rows } = await pool.query(
-      `SELECT id, name, location, capacity, description, equipment, photo_url,
+      `SELECT id, name, location, capacity, description, equipment, photo_url, photos,
               min_booking_minutes, max_booking_minutes, status, is_disabled,
               created_at, updated_at
        FROM rooms WHERE id = $1`,
@@ -106,7 +106,28 @@ class RoomRepository {
     return rowCount > 0;
   }
 
-  // Переключаем временное отключение комнаты (вызывается админом).
+  static async addPhoto(id, photoUrl) {
+    const { rows } = await pool.query(
+      `UPDATE rooms SET photos = photos || $2::jsonb, photo_url = COALESCE(photo_url, $3), updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [id, JSON.stringify([photoUrl]), photoUrl]
+    );
+    return rows[0] || null;
+  }
+
+  static async removePhoto(id, photoUrl) {
+    const room = await this.findById(id);
+    if (!room) return null;
+    const photos = (room.photos || []).filter((p) => p !== photoUrl);
+    const newCover = photos[0] || null;
+    const { rows } = await pool.query(
+      `UPDATE rooms SET photos = $2::jsonb, photo_url = $3, updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [id, JSON.stringify(photos), newCover]
+    );
+    return rows[0] || null;
+  }
+
   static async toggleDisabled(id, isDisabled) {
     // Если комната отключается, меняем статус на «vedlikehald» (обслуживание).
     const status = isDisabled ? "vedlikehald" : "ledig";

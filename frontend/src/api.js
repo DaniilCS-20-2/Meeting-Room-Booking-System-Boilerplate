@@ -24,6 +24,26 @@ export async function apiFetch(path, { method = "GET", body, token } = {}) {
     const msg = json?.message || `Error ${res.status}`;
     throw new Error(msg);
   }
-  // Возвращаем поле data из ответа (стандартная обёртка { success, data }).
+  return json?.data ?? json;
+}
+
+export async function apiUpload(path, { file, fieldName = "file", token } = {}) {
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = json?.message || `Error ${res.status}`;
+    throw new Error(msg);
+  }
   return json?.data ?? json;
 }

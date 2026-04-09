@@ -81,5 +81,28 @@ const toggleDisabled = async (req, res, next) => {
   }
 };
 
-// Экспортируем все контроллеры комнат.
-module.exports = { getAll, getById, create, update, remove, toggleDisabled };
+const RoomRepository = require("../models/roomRepository");
+
+const uploadPhoto = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded." });
+    const photoUrl = `/uploads/${req.file.filename}`;
+    const room = await RoomRepository.addPhoto(req.params.id, photoUrl);
+    res.json({ success: true, data: room });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deletePhoto = async (req, res, next) => {
+  try {
+    const { photoUrl } = req.body;
+    if (!photoUrl) return res.status(400).json({ success: false, message: "photoUrl required." });
+    const room = await RoomRepository.removePhoto(req.params.id, photoUrl);
+    res.json({ success: true, data: room });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getAll, getById, create, update, remove, toggleDisabled, uploadPhoto, deletePhoto };

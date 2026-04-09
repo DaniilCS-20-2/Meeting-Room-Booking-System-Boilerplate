@@ -14,18 +14,14 @@ const register = async (req, res, next) => {
   }
 };
 
-// Контроллер подтверждения email по коду верификации.
 const verifyEmail = async (req, res, next) => {
   try {
-    // Передаём id пользователя из токена и код из тела запроса.
     const result = await AuthService.verifyEmail({
-      userId: req.user.id,
+      pendingToken: req.body.pendingToken,
       code: req.body.code,
     });
-    // Возвращаем 200 с подтверждением верификации.
     res.json({ success: true, data: result });
   } catch (err) {
-    // Передаём ошибку в глобальный обработчик.
     next(err);
   }
 };

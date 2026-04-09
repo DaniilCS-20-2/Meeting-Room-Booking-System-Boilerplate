@@ -60,7 +60,18 @@ const confirmEmailChange = async (req, res, next) => {
   }
 };
 
+const uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded." });
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    const user = await ProfileService.updateProfile(req.user.id, { avatarUrl });
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
-  updateProfile, requestPasswordChange, confirmPasswordChange,
+  updateProfile, uploadAvatar, requestPasswordChange, confirmPasswordChange,
   requestEmailChange, confirmEmailChange,
 };

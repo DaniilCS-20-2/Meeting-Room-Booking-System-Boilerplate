@@ -130,15 +130,16 @@ class BookingRepository {
     return rows;
   }
 
-  // Получаем одно бронирование по UUID идентификатору.
   static async findById(id) {
-    // Формируем SELECT-запрос по первичному ключу.
     const { rows } = await pool.query(
-      `SELECT id, room_id, user_id, start_time, end_time, status, comment, created_at
-       FROM bookings WHERE id = $1`,
+      `SELECT b.id, b.room_id, b.user_id, b.start_time, b.end_time, b.status, b.comment, b.created_at,
+              u.email AS user_email, u.display_name AS user_name, r.name AS room_name
+       FROM bookings b
+       JOIN users u ON u.id = b.user_id
+       JOIN rooms r ON r.id = b.room_id
+       WHERE b.id = $1`,
       [id]
     );
-    // Возвращаем бронирование или null.
     return rows[0] || null;
   }
 

@@ -12,8 +12,7 @@ const router = express.Router();
 router.post("/register", authController.register);
 // POST /api/auth/login — логин по email и паролю.
 router.post("/login", authController.login);
-// POST /api/auth/verify — подтверждение email кодом (требует JWT-токен).
-router.post("/verify", authMiddleware, authController.verifyEmail);
+router.post("/verify", authController.verifyEmail);
 // GET  /api/auth/me — получение данных текущего пользователя (требует JWT-токен).
 router.get("/me", authMiddleware, authController.me);
 

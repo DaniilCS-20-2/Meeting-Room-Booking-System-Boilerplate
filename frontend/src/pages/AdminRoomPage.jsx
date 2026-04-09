@@ -1,24 +1,19 @@
-// Импортируем React и необходимые хуки.
-import React, { useEffect, useState } from "react";
-// Импортируем useNavigate для переходов и useParams для параметров URL.
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-// Импортируем хук аутентификации.
 import { useAuth } from "../context/AuthContext";
-// Импортируем обёртку для API-запросов.
-import { apiFetch } from "../api";
-// Импортируем объект переводов (Nynorsk).
+import { apiFetch, apiUpload } from "../api";
 import { t } from "../i18n/labels";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
-// Админская страница создания/редактирования комнаты.
+const API_BASE = "http://localhost:4000";
+const toSrc = (url) => (url?.startsWith("/uploads") ? `${API_BASE}${url}` : url);
+
 export const AdminRoomPage = () => {
-  // Получаем roomId из URL (если есть — режим редактирования).
   const { roomId } = useParams();
-  // Получаем токен из контекста аутентификации.
   const { token } = useAuth();
-  // Получаем функцию программной навигации.
   const navigate = useNavigate();
-  // Определяем режим: редактирование (true) или создание (false).
   const isEdit = !!roomId;
+  const fileRef = useRef(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -26,20 +21,18 @@ export const AdminRoomPage = () => {
     capacity: 6,
     description: "",
     equipment: "",
-    photoUrl: "",
     minBookingMinutes: 15,
     maxBookingMinutes: 480,
   });
+  const [photos, setPhotos] = useState([]);
   const [noMinLimit, setNoMinLimit] = useState(false);
   const [noMaxLimit, setNoMaxLimit] = useState(false);
-  // State: флаг отключения комнаты.
   const [isDisabled, setIsDisabled] = useState(false);
-  // State: текст ошибки.
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // При редактировании подгружаем данные существующей комнаты с сервера.
   useEffect(() => {
-    // Если не режим редактирования или нет токена — не загружаем.
     if (!isEdit || !token) return;
     apiFetch(`/rooms/${roomId}`, { token }).then((room) => {
       setForm({
@@ -48,22 +41,52 @@ export const AdminRoomPage = () => {
         capacity: room.capacity || 6,
         description: room.description || "",
         equipment: room.equipment || "",
-        photoUrl: room.photo_url || "",
         minBookingMinutes: room.min_booking_minutes ?? 15,
         maxBookingMinutes: room.max_booking_minutes ?? 480,
       });
+      setPhotos(room.photos || []);
       setNoMinLimit(room.min_booking_minutes == null);
       setNoMaxLimit(room.max_booking_minutes == null);
       setIsDisabled(room.is_disabled);
     }).catch(() => {});
   }, [roomId, token, isEdit]);
 
-  // Универсальный обработчик изменения полей формы.
   const handleChange = (e) => {
-    // Для числовых полей преобразуем значение в Number.
     const val = e.target.type === "number" ? Number(e.target.value) : e.target.value;
-    // Обновляем конкретное поле формы по атрибуту name.
     setForm((p) => ({ ...p, [e.target.name]: val }));
+  };
+
+  const handleAddPhoto = () => {
+    if (isEdit) fileRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !isEdit) return;
+    setUploading(true);
+    setError("");
+    try {
+      const room = await apiUpload(`/rooms/${roomId}/photo`, { file, fieldName: "photo", token });
+      setPhotos(room.photos || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeletePhoto = async (url) => {
+    try {
+      const room = await apiFetch(`/rooms/${roomId}/photo`, {
+        method: "DELETE", token,
+        body: { photoUrl: url },
+      });
+      setPhotos(room.photos || []);
+    } catch (err) {
+      setError(err.message);
+    }
+    setConfirmDelete(null);
   };
 
   const handleSubmit = async (e) => {
@@ -86,62 +109,72 @@ export const AdminRoomPage = () => {
     }
   };
 
-  // Обработчик переключения отключения комнаты.
   const handleToggleDisable = async () => {
     try {
-      // PATCH /api/rooms/:roomId/disable — переключаем флаг.
       await apiFetch(`/rooms/${roomId}/disable`, {
         method: "PATCH", token,
         body: { isDisabled: !isDisabled },
       });
-      // Обновляем локальный state.
       setIsDisabled(!isDisabled);
     } catch (err) {
-      // Показываем ошибку через alert.
       alert(err.message);
     }
   };
 
+  const mainPhoto = photos[0] ? toSrc(photos[0]) : null;
+
   return (
-    <section className="page page--narrow">
-      {/* Заголовок: «Новая комната» или «Редактирование». */}
+    <section className="page" style={{ maxWidth: 960 }}>
       <h1 className="page__title">{isEdit ? t.admin_room_title_edit : t.admin_room_title_new}</h1>
-      {/* Показываем ошибку, если есть. */}
       {error && <p className="error-text">{error}</p>}
 
-      {/* Layout: фото слева, форма справа. */}
       <div className="admin-room-layout">
-        {/* Секция фотографии комнаты. */}
-        <div className="admin-room-photo">
-          {/* Превью фото или placeholder. */}
-          {form.photoUrl
-            ? <img src={form.photoUrl} alt="" className="admin-room-photo__img" />
-            : <div className="admin-room-photo__placeholder">Bilete</div>}
-          {/* Поле ввода URL фотографии. */}
-          <label className="form-label">{t.admin_room_photo}
-            <input className="form-input" name="photoUrl" value={form.photoUrl} onChange={handleChange} placeholder="https://..." />
-          </label>
+        {/* Left: photos */}
+        <div className="admin-room-left">
+          {isEdit && (
+            <>
+              <div className="admin-room-main-photo">
+                {mainPhoto
+                  ? <img src={mainPhoto} alt="" className="admin-room-main-photo__img" />
+                  : <div className="admin-room-main-photo__empty" onClick={handleAddPhoto}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" fill="#bbb"/>
+                        <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" stroke="#bbb" strokeWidth="1.5" fill="none"/>
+                      </svg>
+                      <span style={{ color: "#9ca3af", fontSize: 14, marginTop: 6 }}>Legg til bilete</span>
+                    </div>}
+              </div>
+              <div className="admin-photos__thumbs">
+                {photos.map((url, i) => (
+                  <div key={i} className="admin-photos__thumb">
+                    <img src={toSrc(url)} alt="" className="admin-photos__thumb-img" />
+                    <button type="button" className="admin-photos__remove"
+                      onClick={() => setConfirmDelete(url)} title="Slett bilete">✕</button>
+                  </div>
+                ))}
+                <div className="admin-photos__thumb admin-photos__thumb--add" onClick={handleAddPhoto}>
+                  {uploading ? "..." : "+"}
+                </div>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+            </>
+          )}
         </div>
 
-        {/* Форма с полями комнаты. */}
+        {/* Right: form */}
         <form className="form-card admin-room-form" onSubmit={handleSubmit}>
-          {/* Поле «Название». */}
           <label className="form-label">{t.admin_room_name}
             <input className="form-input" name="name" value={form.name} onChange={handleChange} required />
           </label>
-          {/* Поле «Локация». */}
           <label className="form-label">{t.admin_room_location}
             <input className="form-input" name="location" value={form.location} onChange={handleChange} />
           </label>
-          {/* Поле «Вместимость». */}
           <label className="form-label">{t.admin_room_capacity}
             <input className="form-input" type="number" name="capacity" value={form.capacity} onChange={handleChange} min={1} required />
           </label>
-          {/* Поле «Описание» (textarea). */}
           <label className="form-label">{t.admin_room_description}
             <textarea className="form-input form-textarea" name="description" value={form.description} onChange={handleChange} />
           </label>
-          {/* Поле «Оборудование». */}
           <label className="form-label">{t.admin_room_equipment}
             <input className="form-input" name="equipment" value={form.equipment} onChange={handleChange} />
           </label>
@@ -171,9 +204,7 @@ export const AdminRoomPage = () => {
               </div>
             </label>
           </div>
-          {/* Кнопка «Сохранить» — создание или обновление. */}
           <button className="btn btn--primary btn--full" type="submit">{t.admin_room_save}</button>
-          {/* Кнопка вкл/выкл комнату — только в режиме редактирования. */}
           {isEdit && (
             <button className="btn btn--full" type="button" onClick={handleToggleDisable}>
               {isDisabled ? t.admin_room_enable : t.admin_room_disable}
@@ -181,6 +212,15 @@ export const AdminRoomPage = () => {
           )}
         </form>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Slett bilete"
+          text="Er du sikker på at du vil slette dette biletet?"
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => handleDeletePhoto(confirmDelete)}
+        />
+      )}
     </section>
   );
 };

@@ -1,13 +1,12 @@
 // Импортируем React и необходимые хуки.
-import React, { useEffect, useState, useMemo } from "react";
-// Импортируем Link для навигации и useParams для параметров URL.
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 // Импортируем хук аутентификации.
 import { useAuth } from "../context/AuthContext";
 // Импортируем обёртку для API-запросов.
 import { apiFetch } from "../api";
-// Импортируем объект переводов (Nynorsk).
 import { t } from "../i18n/labels";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 // Вспомогательная функция: генерируем массив из 7 дней начиная с указанной даты.
 // Используется для построения недельного календаря.
@@ -33,7 +32,43 @@ const buildWeekGrid = (startDate) => {
 // Массив часов от 0 до 23 для строк календаря.
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-// Страница детальной информации о комнате с бронированием.
+const API_BASE = "http://localhost:4000";
+const toSrc = (url) => (url?.startsWith("/uploads") ? `${API_BASE}${url}` : url);
+
+const RoomCarousel = ({ photos, fallback, name }) => {
+  const imgs = photos.length ? photos : (fallback ? [fallback] : []);
+  const [idx, setIdx] = useState(0);
+  const len = imgs.length;
+
+  const prev = useCallback(() => setIdx((i) => (i - 1 + len) % len), [len]);
+  const next = useCallback(() => setIdx((i) => (i + 1) % len), [len]);
+
+  if (!len) return <div className="room-top__photo"><div className="room-top__placeholder" /></div>;
+
+  return (
+    <div className="room-carousel">
+      <div className="room-carousel__viewport">
+        <img src={toSrc(imgs[idx])} alt={name} className="room-carousel__img" />
+        {len > 1 && (
+          <>
+            <button type="button" className="room-carousel__arrow room-carousel__arrow--left" onClick={prev}>‹</button>
+            <button type="button" className="room-carousel__arrow room-carousel__arrow--right" onClick={next}>›</button>
+          </>
+        )}
+      </div>
+      {len > 1 && (
+        <div className="room-carousel__dots">
+          {imgs.map((_, i) => (
+            <button key={i} type="button"
+              className={`room-carousel__dot${i === idx ? " room-carousel__dot--active" : ""}`}
+              onClick={() => setIdx(i)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const RoomPage = () => {
   // Получаем roomId из параметров URL (react-router).
   const { roomId } = useParams();
@@ -65,6 +100,7 @@ export const RoomPage = () => {
 
   const isAdmin = user?.role === "admin";
   const [historySort, setHistorySort] = useState("time");
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Загружаем данные комнаты с сервера при монтировании или смене roomId.
   useEffect(() => {
@@ -108,7 +144,7 @@ export const RoomPage = () => {
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
     const endRange = new Date(now);
-    endRange.setDate(endRange.getDate() + 7);
+    endRange.setDate(endRange.getDate() + 30);
     endRange.setHours(23, 59, 0, 0);
 
     const rawGaps = [];
@@ -174,17 +210,20 @@ export const RoomPage = () => {
     }
   };
 
-  // Обработчик отмены бронирования по id.
-  const handleCancel = async (bookingId) => {
-    try {
-      // PATCH /api/bookings/:id/cancel — отменяем бронирование.
-      await apiFetch(`/bookings/${bookingId}/cancel`, { method: "PATCH", token });
-      // Перезагружаем данные после отмены.
-      loadBookings();
-    } catch (err) {
-      // Показываем ошибку через alert.
-      alert(err.message);
-    }
+  const handleCancel = (bookingId) => {
+    setConfirmAction({
+      title: "Avbestill booking",
+      text: "Er du sikker på at du vil avbestille denne bookinga?",
+      action: async () => {
+        try {
+          await apiFetch(`/bookings/${bookingId}/cancel`, { method: "PATCH", token });
+          loadBookings();
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
   };
 
   // Обработчик отправки нового комментария.
@@ -210,17 +249,20 @@ export const RoomPage = () => {
     }
   };
 
-  // Обработчик удаления комментария (только для админа).
-  const handleDeleteComment = async (id) => {
-    try {
-      // DELETE /api/comments/:id — удаляем комментарий.
-      await apiFetch(`/comments/${id}`, { method: "DELETE", token });
-      // Перезагружаем список комментариев.
-      loadComments();
-    } catch (err) {
-      // Показываем ошибку через alert.
-      alert(err.message);
-    }
+  const handleDeleteComment = (id) => {
+    setConfirmAction({
+      title: "Slett kommentar",
+      text: "Er du sikker på at du vil slette denne kommentaren?",
+      action: async () => {
+        try {
+          await apiFetch(`/comments/${id}`, { method: "DELETE", token });
+          loadComments();
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
   };
 
   const toLocalInput = (date) => {
@@ -257,13 +299,18 @@ export const RoomPage = () => {
       if (be > slotStart && be <= slotEnd) labels.push(fmt(be));
     }
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    return { booked: true, past: allPast, label: [...new Set(labels)].join(" - ") };
+    return { booked: true, past: allPast, label: [...new Set(labels)].join(" — ") };
   };
 
-  // Форматируем ISO-дату в читаемый формат (dd.MM HH:mm).
-  const formatTime = (iso) => new Date(iso).toLocaleString("nn-NO", {
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-  });
+  const fmtDate = (d) => d.toLocaleDateString("nn-NO", { day: "numeric", month: "short" });
+  const fmtClock = (d) => d.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" });
+  const formatRange = (startIso, endIso) => {
+    const s = new Date(startIso);
+    const e = new Date(endIso);
+    const sameDay = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth() && s.getDate() === e.getDate();
+    if (sameDay) return `${fmtDate(s)}, ${fmtClock(s)} – ${fmtClock(e)}`;
+    return `${fmtDate(s)} ${fmtClock(s)} – ${fmtDate(e)} ${fmtClock(e)}`;
+  };
 
   // Переход на предыдущую неделю.
   const prevWeek = () => setWeekStart(new Date(weekStart.getTime() - 7 * 86400000));
@@ -276,7 +323,7 @@ export const RoomPage = () => {
   const now = new Date();
   const sortFn = (a, b) => {
     if (historySort === "activity") return new Date(b.created_at) - new Date(a.created_at);
-    return new Date(a.start_time) - new Date(b.start_time);
+    return new Date(b.start_time) - new Date(a.start_time);
   };
   const futureBookings = history
     .filter((b) => new Date(b.end_time) > now && b.status !== "cancelled")
@@ -291,17 +338,9 @@ export const RoomPage = () => {
 
   return (
     <section className="page">
-      {/* Кнопка «Назад» — возврат на главную. */}
-      <Link className="btn btn--small" to="/">{t.room_back}</Link>
-
       {/* Верхняя секция: фото комнаты слева + бронирование справа. */}
       <div className="room-top">
-        {/* Фото комнаты. */}
-        <div className="room-top__photo">
-          {room.photo_url
-            ? <img src={room.photo_url} alt={room.name} className="room-top__img" />
-            : <div className="room-top__placeholder" />}
-        </div>
+        <RoomCarousel photos={room.photos || []} fallback={room.photo_url} name={room.name} />
 
         {/* Блок бронирования и информации. */}
         <div className="room-top__booking">
@@ -428,11 +467,8 @@ export const RoomPage = () => {
               <h3 className="subsection-title">Komande</h3>
               {futureBookings.map((b) => (
                 <div key={b.id} className="history-item">
-                  {/* Время начала и окончания. */}
-                  <span>{formatTime(b.start_time)} - {formatTime(b.end_time)}</span>
-                  {/* Имя автора бронирования. */}
+                  <span>{formatRange(b.start_time, b.end_time)}</span>
                   <span className="history-item__user">{b.user_name}</span>
-                  {/* Кнопка отмены: доступна автору или админу. */}
                   {(b.user_id === user.id || isAdmin) && (
                     <button type="button" className="btn btn--small btn--danger" onClick={() => handleCancel(b.id)}>
                       {t.room_cancel_booking}
@@ -442,12 +478,12 @@ export const RoomPage = () => {
               ))}
             </>
           )}
-          {pastBookings.length > 0 && (
+          {isAdmin && pastBookings.length > 0 && (
             <>
               <h3 className="subsection-title">Tidlegare</h3>
               {pastBookings.map((b) => (
                 <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
-                  <span>{formatTime(b.start_time)} - {formatTime(b.end_time)}</span>
+                  <span>{formatRange(b.start_time, b.end_time)}</span>
                   <span className="history-item__user">{b.user_name}</span>
                   <span className="history-item__status">{b.status}</span>
                 </div>
@@ -487,6 +523,14 @@ export const RoomPage = () => {
           </div>
         </div>
       </div>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          text={confirmAction.text}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </section>
   );
 };

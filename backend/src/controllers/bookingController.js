@@ -1,9 +1,7 @@
-// Импортируем сервис бизнес-логики бронирований.
 const BookingService = require("../services/bookingService");
-// Импортируем репозиторий для GET-запросов бронирований.
 const BookingRepository = require("../models/bookingRepository");
-// Импортируем типизированную HTTP-ошибку.
 const HttpError = require("../utils/httpError");
+const { sendCancellationNotice } = require("../utils/mailer");
 
 // Контроллер создания бронирования (одиночного или recurring).
 const createBooking = async (req, res, next) => {
@@ -80,10 +78,20 @@ const cancel = async (req, res, next) => {
     if (req.user.role !== "admin" && booking.user_id !== req.user.id) {
       throw new HttpError(403, "You can only cancel your own bookings.");
     }
+    const isAdminCancellingOther = req.user.role === "admin" && booking.user_id !== req.user.id;
     const cancelled = await BookingRepository.cancel(req.params.id);
-    // Если уже было отменено — 400.
     if (!cancelled) throw new HttpError(400, "Booking already cancelled.");
-    // Возвращаем 200 с данными отменённого бронирования.
+
+    if (isAdminCancellingOther && booking.user_email) {
+      const start = new Date(booking.start_time);
+      const end = new Date(booking.end_time);
+      const fmt = (d) => d.toLocaleString("nn-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      sendCancellationNotice(booking.user_email, {
+        roomName: booking.room_name,
+        time: `${fmt(start)} — ${fmt(end)}`,
+      }).catch(() => {});
+    }
+
     res.json({ success: true, data: cancelled });
   } catch (err) {
     // Передаём ошибку в глобальный обработчик.
