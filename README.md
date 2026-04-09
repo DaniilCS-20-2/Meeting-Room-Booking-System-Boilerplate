@@ -1,48 +1,95 @@
-# Meeting Room Booking System Boilerplate
+# Meeting Room Booking System
 
-## Что уже подготовлено
+Система бронирования переговорных комнат с веб-интерфейсом на нюнорск (Nynorsk).
 
-- `database/migrations/001_init.sql` — миграционная SQL-схема PostgreSQL с ролями, комнатами, бронированиями, индексами и защитой от двойного бронирования.
-- `backend/src` — backend на Node.js + Express с сервисным слоем, RBAC и глобальной обработкой ошибок.
-- `frontend/src` — пример React Dashboard (Functional Components + Hooks) с Tailwind-классами и интерфейсом только на Nynorsk.
+## Возможности
 
-## Структура папок
+- **Бронирование комнат** — выбор свободного времени, автоподсказка ближайших слотов, недельный календарь.
+- **Несколько фото** — к каждой комнате можно загрузить несколько фотографий; на странице комнаты работает карусель.
+- **Гибкие ограничения** — админ задаёт минимальную/максимальную длительность бронирования для каждой комнаты (или отключает лимит).
+- **Подтверждение по email** — при регистрации, смене пароля и смене email отправляется код подтверждения.
+- **Роль админа** — автоматически назначается по списку email из `ADMIN_EMAILS`.
+- **Админ-панель** — создание/редактирование/удаление комнат, управление пользователями, отмена чужих бронирований.
+- **Уведомления** — при отмене бронирования админом владелец получает email.
+- **Подтверждения** — все деструктивные действия требуют подтверждения через модальное окно.
+- **История** — сортировка по времени или активности; прошедшие бронирования видны только админу.
 
-- `database/migrations` — SQL-миграции для PostgreSQL.
-- `backend/src/config` — конфигурация окружения.
-- `backend/src/db` — подключение к базе.
-- `backend/src/models` — репозитории (доступ к данным).
-- `backend/src/services` — бизнес-логика (SOLID: изоляция правил предметной области).
-- `backend/src/controllers` — HTTP-слой (валидация входа/выхода).
-- `backend/src/routes` — маршруты API.
-- `backend/src/middlewares` — middleware (auth, RBAC, обработка ошибок).
-- `backend/src/utils` — служебные утилиты и типизированные ошибки.
-- `frontend/src/components/atoms` — базовые UI-элементы.
-- `frontend/src/components/molecules` — составные UI-блоки.
-- `frontend/src/components/organisms` — крупные UI-секции.
-- `frontend/src/i18n` — словари меток интерфейса.
+## Технологии
 
-## Как работает recurring booking (еженедельные повторения)
+| Слой | Стек |
+|------|------|
+| Frontend | React 18, Vite, React Router, CSS (BEM) |
+| Backend | Node.js, Express, JWT, bcryptjs |
+| БД | PostgreSQL, GiST exclusion constraints |
+| Email | Nodemailer (Gmail SMTP) |
+| Файлы | Multer (загрузка фото) |
 
-1. Клиент передаёт:
-   - `startDateTime` и `endDateTime` первого слота,
-   - `recurring.weekdays` (например, `[1, 4]` для Mon/Thu),
-   - `recurring.untilDate` (дата окончания серии).
-2. Сервис проверяет:
-   - время кратно 15 минутам,
-   - длительность не меньше 15 минут,
-   - `untilDate` не раньше первой даты.
-3. Сервис генерирует набор конкретных слотов (каждый понедельник/четверг в том же времени).
-4. Все слоты вставляются в БД в одной транзакции.
-5. Если хотя бы один слот конфликтует, PostgreSQL исключающее ограничение (`EXCLUDE USING gist`) отклоняет транзакцию — серия не создаётся частично.
+## Структура проекта
 
-## Быстрый старт (пример)
+```
+database/migrations/     — SQL-миграции (001–004)
+backend/src/
+  config/                — конфигурация окружения
+  db/                    — пул подключений к PostgreSQL
+  models/                — репозитории (SQL-запросы)
+  services/              — бизнес-логика
+  controllers/           — HTTP-обработчики
+  routes/                — маршруты API
+  middlewares/           — auth, RBAC, обработка ошибок
+  utils/                 — mailer, HttpError
+frontend/src/
+  pages/                 — страницы (Home, Room, Auth, Profile, Admin)
+  components/            — переиспользуемые компоненты (ConfirmDialog)
+  context/               — AuthContext
+  i18n/                  — словарь Nynorsk
+  styles/                — app.css
+```
 
-- Подготовьте PostgreSQL и выполните `database/migrations/001_init.sql`.
-- Заполните `.env` для backend (`JWT_SECRET`, `DATABASE_URL`, `ALLOWED_EMAIL_DOMAIN`).
-- Установите зависимости и запустите backend/frontend в ваших стандартных scripts.
+## Быстрый старт
 
-## Важно
+### 1. База данных
 
-- Язык UI: только Nynorsk.
-- Для production добавьте полноценную валидацию входных DTO (например, `zod`) и тесты (`unit` + `integration`).
+```bash
+# Создайте БД и выполните миграции по порядку:
+psql -U postgres -c "CREATE DATABASE booking_app_db;"
+psql -U postgres -d booking_app_db -f database/migrations/001_init.sql
+psql -U postgres -d booking_app_db -f database/migrations/002_seed.sql
+psql -U postgres -d booking_app_db -f database/migrations/003_flexible_duration.sql
+psql -U postgres -d booking_app_db -f database/migrations/004_room_photos.sql
+```
+
+### 2. Backend
+
+```bash
+cd backend
+cp env.example .env
+# Отредактируйте .env — укажите пароль БД, JWT_SECRET, SMTP-настройки, ADMIN_EMAILS
+npm install
+npm run dev
+# Сервер запустится на http://localhost:4000
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Откройте http://localhost:5173
+```
+
+## Переменные окружения (backend/.env)
+
+| Переменная | Описание |
+|------------|----------|
+| `DATABASE_URL` | Строка подключения к PostgreSQL |
+| `JWT_SECRET` | Секрет для подписи JWT-токенов |
+| `PORT` | Порт сервера (по умолчанию 4000) |
+| `FRONTEND_URL` | URL фронтенда для CORS |
+| `SMTP_USER` | Gmail-адрес для отправки писем |
+| `SMTP_PASS` | App Password от Gmail |
+| `ADMIN_EMAILS` | Список email через запятую — эти пользователи получат роль admin при регистрации |
+
+## Язык интерфейса
+
+Весь UI на **нюнорск** (Nynorsk). Переводы в `frontend/src/i18n/labels.js`.
