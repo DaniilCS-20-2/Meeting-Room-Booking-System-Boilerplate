@@ -487,13 +487,15 @@ export const RoomPage = () => {
           {isAdmin && pastBookings.length > 0 && (
             <>
               <h3 className="subsection-title">Tidlegare</h3>
-              {pastBookings.map((b) => (
-                <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
-                  <span>{formatRange(b.start_time, b.end_time)}</span>
-                  <span className="history-item__user">{b.user_name}</span>
-                  <span className="history-item__status">{b.status}</span>
-                </div>
-              ))}
+              <div className="history-past-list">
+                {pastBookings.map((b) => (
+                  <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
+                    <span>{formatRange(b.start_time, b.end_time)}</span>
+                    <span className="history-item__user">{b.user_name}</span>
+                    <span className="history-item__status">{b.status}</span>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>
