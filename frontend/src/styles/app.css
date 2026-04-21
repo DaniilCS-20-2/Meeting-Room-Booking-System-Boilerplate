@@ -473,15 +473,15 @@ body {
 
   /* Mobile: email в первой строке, role + Fjern во второй, без растягивания. */
   .whitelist-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 8px;
-    row-gap: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 8px 10px;
   }
-  .whitelist-item__email { grid-column: 1 / -1; }
+  .whitelist-item__email { flex: 1 0 100%; }
   .whitelist-item__role {
     min-height: 32px; padding: 4px 8px; font-size: 13px;
-    width: 100%;
+    width: auto;
   }
   .whitelist-item__remove { padding: 6px 14px; }
 }
