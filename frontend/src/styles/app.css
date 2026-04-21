@@ -13,6 +13,15 @@ body {
   line-height: 1.5;
   color: #1f2937;
   background: #f3f4f6;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: none;
+}
+
+/* iOS safe-area for PWA (notch / home indicator) */
+@supports (padding: max(0px)) {
+  .top-nav { padding-top: max(10px, env(safe-area-inset-top)); }
+  .page    { padding-bottom: max(40px, env(safe-area-inset-bottom)); }
 }
 
 /* --- Контейнер страницы --- */
