@@ -178,11 +178,8 @@ export const AdminUsersPage = () => {
               type="button"
               className="btn btn--small btn--danger whitelist-item__remove"
               onClick={() => handleWhitelistDelete(w.id, w.email)}
-              title={t.admin_whitelist_remove}
-              aria-label={t.admin_whitelist_remove}
             >
-              <span className="whitelist-item__remove-text">{t.admin_whitelist_remove}</span>
-              <span className="whitelist-item__remove-icon" aria-hidden="true">×</span>
+              {t.admin_whitelist_remove}
             </button>
           </div>
         ))}

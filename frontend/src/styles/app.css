@@ -466,36 +466,24 @@ body {
   min-width: 0;
 }
 .whitelist-item__role { min-height: 36px; padding: 4px 8px; }
-.whitelist-item__remove-icon { display: none; }
 
 @media (max-width: 560px) {
   .whitelist-add { grid-template-columns: 1fr 1fr; }
   .whitelist-add > button { grid-column: 1 / -1; }
 
+  /* Mobile: email в первой строке, role + Fjern во второй, без растягивания. */
   .whitelist-item {
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 8px;
     row-gap: 6px;
     padding: 8px 10px;
   }
-  /* Email занимает всю первую строку. */
   .whitelist-item__email { grid-column: 1 / -1; }
   .whitelist-item__role {
     min-height: 32px; padding: 4px 8px; font-size: 13px;
     width: 100%;
   }
-  /* Компактная круглая кнопка-крестик заменяет длинный красный "Fjern". */
-  .whitelist-item__remove {
-    width: 32px; height: 32px;
-    padding: 0; border-radius: 50%;
-    border: 1px solid #fecaca;
-    background: #fff; color: #dc2626;
-    font-size: 18px; line-height: 1;
-    flex-shrink: 0;
-  }
-  .whitelist-item__remove:hover { background: #fee2e2; }
-  .whitelist-item__remove-text { display: none; }
-  .whitelist-item__remove-icon { display: inline; }
+  .whitelist-item__remove { padding: 6px 14px; }
 }
 
 /* ============================================================
