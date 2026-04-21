@@ -298,11 +298,11 @@ export const RoomPage = () => {
     for (const b of overlapping) {
       const bs = new Date(b.start_time);
       const be = new Date(b.end_time);
-      if (bs >= slotStart && bs < slotEnd) labels.push(fmt(bs));
-      if (be > slotStart && be <= slotEnd) labels.push(fmt(be));
+      if (bs >= slotStart && bs < slotEnd && bs.getTime() !== slotStart.getTime()) labels.push(fmt(bs));
+      if (be > slotStart && be <= slotEnd && be.getTime() !== slotEnd.getTime()) labels.push(fmt(be));
     }
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    return { booked: true, past: allPast, label: [...new Set(labels)].join(" — ") };
+    return { booked: true, past: allPast, label: [...new Set(labels)].join(" – ") };
   };
 
   const fmtDate = (d) => d.toLocaleDateString("nn-NO", { day: "numeric", month: "short" });
