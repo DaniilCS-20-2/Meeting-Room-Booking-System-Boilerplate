@@ -454,12 +454,12 @@ body {
   .calendar-grid__row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)); }
   .calendar-grid__day-label { padding: 6px 2px; font-size: 10px; }
   .calendar-grid__hour { padding: 2px 4px; font-size: 10px; }
-  .calendar-grid__cell { min-height: 44px; padding: 2px; }
+  .calendar-grid__cell { min-height: 38px; padding: 2px; }
   .calendar-grid__label {
-    font-size: 10px;
+    font-size: 9px;
     white-space: normal;
     text-align: center;
-    line-height: 1.15;
+    line-height: 1.1;
     word-break: break-word;
   }
 }
