@@ -451,13 +451,13 @@ body {
   margin: 12px 0;
   align-items: center;
 }
-.whitelist-list { display: grid; gap: 6px; }
+.whitelist-list { display: grid; gap: 8px; }
 .whitelist-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 140px auto;
+  gap: 8px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
 }
 .whitelist-item__email {
@@ -465,29 +465,37 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   min-width: 0;
 }
-.whitelist-item__controls { display: flex; align-items: center; gap: 6px; }
-.whitelist-item__role {
-  min-height: 32px; padding: 4px 8px; font-size: 13px;
-  width: 110px;
-}
-.whitelist-item__remove {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1px solid #fecaca; background: #fff; color: #dc2626;
-  font-size: 18px; line-height: 1; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 0; flex-shrink: 0;
-}
-.whitelist-item__remove:hover { background: #fee2e2; }
+.whitelist-item__role { min-height: 36px; padding: 4px 8px; }
+.whitelist-item__remove-icon { display: none; }
 
 @media (max-width: 560px) {
   .whitelist-add { grid-template-columns: 1fr 1fr; }
   .whitelist-add > button { grid-column: 1 / -1; }
+
   .whitelist-item {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 8px 10px;
   }
-  .whitelist-item__controls { justify-content: space-between; }
-  .whitelist-item__role { width: 100%; }
+  /* Email занимает всю первую строку. */
+  .whitelist-item__email { grid-column: 1 / -1; }
+  .whitelist-item__role {
+    min-height: 32px; padding: 4px 8px; font-size: 13px;
+    width: 100%;
+  }
+  /* Компактная круглая кнопка-крестик заменяет длинный красный "Fjern". */
+  .whitelist-item__remove {
+    width: 32px; height: 32px;
+    padding: 0; border-radius: 50%;
+    border: 1px solid #fecaca;
+    background: #fff; color: #dc2626;
+    font-size: 18px; line-height: 1;
+    flex-shrink: 0;
+  }
+  .whitelist-item__remove:hover { background: #fee2e2; }
+  .whitelist-item__remove-text { display: none; }
+  .whitelist-item__remove-icon { display: inline; }
 }
 
 /* ============================================================
