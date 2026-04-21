@@ -117,6 +117,7 @@ body {
   min-height: 40px; padding: 8px 16px; border-radius: 8px;
   border: 1px solid transparent; text-decoration: none;
   font-size: 14px; font-weight: 600;
+  white-space: nowrap; flex-shrink: 0;
 }
 .home-btn--ghost { color: #1f2937; background: transparent; }
 .home-btn--primary { color: #fff; background: #2f3338; border-color: #2f3338; }
@@ -264,7 +265,7 @@ body {
 }
 .calendar-grid__header {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid #e5e7eb;
 }
 .calendar-grid__corner { padding: 8px; }
@@ -275,7 +276,7 @@ body {
 .calendar-grid__body { }
 .calendar-grid__row {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid #f3f4f6;
 }
 .calendar-grid__hour {
@@ -285,6 +286,7 @@ body {
 .calendar-grid__cell {
   min-height: 24px; border-left: 1px solid #f3f4f6;
   position: relative; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; min-width: 0;
 }
 .calendar-grid__cell--booked { background: #fecaca; }
 .calendar-grid__cell--past { background: #e5e7eb; }
@@ -292,6 +294,7 @@ body {
 .calendar-grid__label {
   font-size: 11px; color: #7f1d1d; font-weight: 700;
   white-space: nowrap; pointer-events: none;
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 
 /* --- Room bottom: history + comments --- */
@@ -431,4 +434,20 @@ body {
   .home-page__subtitle { font-size: 16px; }
   .home-topbar__right { flex-wrap: wrap; justify-content: flex-end; }
   .user-item { flex-direction: column; align-items: flex-start; }
+}
+
+/* --- Compact nav for small phones: icon-only admin buttons --- */
+@media (max-width: 560px) {
+  .top-nav, .home-topbar { gap: 6px; }
+  .top-nav__right, .home-topbar__right { gap: 6px; flex-wrap: nowrap; }
+  .home-btn { padding: 8px 10px; font-size: 13px; }
+  .home-btn--icon-only { padding: 8px; width: 40px; min-width: 40px; }
+  .home-btn--icon-only .home-btn__label { display: none; }
+  .home-btn--icon-only svg { margin: 0 !important; }
+  .calendar-grid { font-size: 10px; }
+  .calendar-grid__header,
+  .calendar-grid__row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)); }
+  .calendar-grid__day-label { padding: 6px 2px; font-size: 10px; }
+  .calendar-grid__hour { padding: 2px 4px; font-size: 10px; }
+  .calendar-grid__label { font-size: 9px; }
 }

@@ -80,17 +80,17 @@ const AppLayout = () => {
           <div className="top-nav__right">
             {user && user.role === "admin" && (
               <>
-                <Link className="home-btn home-btn--primary" to="/admin/rooms/new">
+                <Link className="home-btn home-btn--primary home-btn--icon-only" to="/admin/rooms/new" title={t.room_add} aria-label={t.room_add}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{marginRight: 4, verticalAlign: "middle"}}>
                     <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
-                  {t.room_add}
+                  <span className="home-btn__label">{t.room_add}</span>
                 </Link>
-                <Link className="home-btn home-btn--ghost" to="/admin/users">
+                <Link className="home-btn home-btn--ghost home-btn--icon-only" to="/admin/users" title={t.room_manage_users} aria-label={t.room_manage_users}>
                   <svg width="18" height="16" viewBox="0 0 24 20" fill="currentColor" style={{marginRight: 4, verticalAlign: "middle"}}>
                     <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
                   </svg>
-                  {t.room_manage_users}
+                  <span className="home-btn__label">{t.room_manage_users}</span>
                 </Link>
               </>
             )}
