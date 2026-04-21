@@ -124,39 +124,45 @@ export const AdminRoomPage = () => {
   const mainPhoto = photos[0] ? toSrc(photos[0]) : null;
 
   return (
-    <section className={`page ${isEdit ? "" : "page--narrow"}`} style={isEdit ? { maxWidth: 960 } : undefined}>
+    <section className="page" style={{ maxWidth: 960 }}>
       <h1 className="page__title">{isEdit ? t.admin_room_title_edit : t.admin_room_title_new}</h1>
       {error && <p className="error-text">{error}</p>}
 
-      <div className={isEdit ? "admin-room-layout" : ""}>
-        {isEdit && (
-          <div className="admin-room-left">
-            <div className="admin-room-main-photo">
-              {mainPhoto
-                ? <img src={mainPhoto} alt="" className="admin-room-main-photo__img" />
-                : <div className="admin-room-main-photo__empty" onClick={handleAddPhoto}>
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" fill="#bbb"/>
-                      <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" stroke="#bbb" strokeWidth="1.5" fill="none"/>
-                    </svg>
-                    <span style={{ color: "#9ca3af", fontSize: 14, marginTop: 6 }}>Legg til bilete</span>
-                  </div>}
-            </div>
-            <div className="admin-photos__thumbs">
-              {photos.map((url, i) => (
-                <div key={i} className="admin-photos__thumb">
-                  <img src={toSrc(url)} alt="" className="admin-photos__thumb-img" />
-                  <button type="button" className="admin-photos__remove"
-                    onClick={() => setConfirmDelete(url)} title="Slett bilete">✕</button>
-                </div>
-              ))}
-              <div className="admin-photos__thumb admin-photos__thumb--add" onClick={handleAddPhoto}>
-                {uploading ? "..." : "+"}
-              </div>
-            </div>
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+      <div className="admin-room-layout">
+        <div className="admin-room-left">
+          <div className="admin-room-main-photo">
+            {mainPhoto
+              ? <img src={mainPhoto} alt="" className="admin-room-main-photo__img" />
+              : <div className="admin-room-main-photo__empty"
+                  onClick={isEdit ? handleAddPhoto : undefined}
+                  style={{ cursor: isEdit ? "pointer" : "default" }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" fill="#bbb"/>
+                    <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" stroke="#bbb" strokeWidth="1.5" fill="none"/>
+                  </svg>
+                  <span style={{ color: "#9ca3af", fontSize: 14, marginTop: 6, textAlign: "center", padding: "0 12px" }}>
+                    {isEdit ? "Legg til bilete" : "Lagre rommet først for å leggje til bilete"}
+                  </span>
+                </div>}
           </div>
-        )}
+          {isEdit && (
+            <>
+              <div className="admin-photos__thumbs">
+                {photos.map((url, i) => (
+                  <div key={i} className="admin-photos__thumb">
+                    <img src={toSrc(url)} alt="" className="admin-photos__thumb-img" />
+                    <button type="button" className="admin-photos__remove"
+                      onClick={() => setConfirmDelete(url)} title="Slett bilete">✕</button>
+                  </div>
+                ))}
+                <div className="admin-photos__thumb admin-photos__thumb--add" onClick={handleAddPhoto}>
+                  {uploading ? "..." : "+"}
+                </div>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+            </>
+          )}
+        </div>
 
         <form className="form-card admin-room-form" onSubmit={handleSubmit}>
           <label className="form-label">{t.admin_room_name}
@@ -200,9 +206,6 @@ export const AdminRoomPage = () => {
               </div>
             </label>
           </div>
-          {!isEdit && (
-            <p className="form-hint">Du kan leggje til bilete etter at du har oppretta rommet.</p>
-          )}
           <button className="btn btn--primary btn--full" type="submit">{t.admin_room_save}</button>
           {isEdit && (
             <button className="btn btn--full" type="button" onClick={handleToggleDisable}>
