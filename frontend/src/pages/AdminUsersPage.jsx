@@ -165,22 +165,26 @@ export const AdminUsersPage = () => {
         {whitelist.length === 0 && <p className="helper-text">{t.admin_whitelist_empty}</p>}
         {whitelist.map((w) => (
           <div key={w.id} className="whitelist-item">
-            <span className="whitelist-item__email">{w.email}</span>
-            <select
-              className="form-input whitelist-item__role"
-              value={w.role}
-              onChange={(e) => handleWhitelistRoleChange(w.id, e.target.value)}
-            >
-              <option value="user">{t.admin_whitelist_role_user}</option>
-              <option value="admin">{t.admin_whitelist_role_admin}</option>
-            </select>
-            <button
-              type="button"
-              className="btn btn--small btn--danger"
-              onClick={() => handleWhitelistDelete(w.id, w.email)}
-            >
-              {t.admin_whitelist_remove}
-            </button>
+            <span className="whitelist-item__email" title={w.email}>{w.email}</span>
+            <div className="whitelist-item__controls">
+              <select
+                className="form-input whitelist-item__role"
+                value={w.role}
+                onChange={(e) => handleWhitelistRoleChange(w.id, e.target.value)}
+              >
+                <option value="user">{t.admin_whitelist_role_user}</option>
+                <option value="admin">{t.admin_whitelist_role_admin}</option>
+              </select>
+              <button
+                type="button"
+                className="whitelist-item__remove"
+                onClick={() => handleWhitelistDelete(w.id, w.email)}
+                title={t.admin_whitelist_remove}
+                aria-label={t.admin_whitelist_remove}
+              >
+                ×
+              </button>
+            </div>
           </div>
         ))}
       </div>

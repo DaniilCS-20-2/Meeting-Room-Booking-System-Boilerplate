@@ -451,20 +451,43 @@ body {
   margin: 12px 0;
   align-items: center;
 }
-.whitelist-list { display: grid; gap: 8px; }
+.whitelist-list { display: grid; gap: 6px; }
 .whitelist-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px auto;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
 }
-.whitelist-item__email { font-size: 14px; color: #374151; word-break: break-all; }
-.whitelist-item__role { min-height: 36px; padding: 4px 8px; }
+.whitelist-item__email {
+  font-size: 14px; color: #374151;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.whitelist-item__controls { display: flex; align-items: center; gap: 6px; }
+.whitelist-item__role {
+  min-height: 32px; padding: 4px 8px; font-size: 13px;
+  width: 110px;
+}
+.whitelist-item__remove {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid #fecaca; background: #fff; color: #dc2626;
+  font-size: 18px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; flex-shrink: 0;
+}
+.whitelist-item__remove:hover { background: #fee2e2; }
+
 @media (max-width: 560px) {
-  .whitelist-add { grid-template-columns: 1fr; }
-  .whitelist-item { grid-template-columns: 1fr; }
+  .whitelist-add { grid-template-columns: 1fr 1fr; }
+  .whitelist-add > button { grid-column: 1 / -1; }
+  .whitelist-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .whitelist-item__controls { justify-content: space-between; }
+  .whitelist-item__role { width: 100%; }
 }
 
 /* ============================================================
