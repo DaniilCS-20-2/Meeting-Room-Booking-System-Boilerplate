@@ -447,10 +447,19 @@ body {
   .home-btn--icon-only { padding: 8px; width: 40px; min-width: 40px; }
   .home-btn--icon-only .home-btn__label { display: none; }
   .home-btn--icon-only svg { margin: 0 !important; }
+
+  /* Calendar: taller cells with 2-line labels instead of wider columns */
   .calendar-grid { font-size: 10px; }
   .calendar-grid__header,
   .calendar-grid__row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)); }
   .calendar-grid__day-label { padding: 6px 2px; font-size: 10px; }
   .calendar-grid__hour { padding: 2px 4px; font-size: 10px; }
-  .calendar-grid__label { font-size: 9px; }
+  .calendar-grid__cell { min-height: 44px; padding: 2px; }
+  .calendar-grid__label {
+    font-size: 10px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.15;
+    word-break: break-word;
+  }
 }
