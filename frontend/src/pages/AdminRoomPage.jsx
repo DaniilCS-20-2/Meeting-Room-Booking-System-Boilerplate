@@ -24,6 +24,7 @@ export const AdminRoomPage = () => {
     maxBookingMinutes: 480,
   });
   const [photos, setPhotos] = useState([]);
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [noMinLimit, setNoMinLimit] = useState(false);
   const [noMaxLimit, setNoMaxLimit] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
@@ -56,14 +57,19 @@ export const AdminRoomPage = () => {
   };
 
   const handleAddPhoto = () => {
-    if (isEdit) fileRef.current?.click();
+    fileRef.current?.click();
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !isEdit) return;
-    setUploading(true);
+    if (!file) return;
     setError("");
+    if (!isEdit) {
+      setPendingFiles((prev) => [...prev, file]);
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
     try {
       const room = await apiUpload(`/rooms/${roomId}/photo`, { file, fieldName: "photo", token });
       setPhotos(room.photos || []);
@@ -75,11 +81,16 @@ export const AdminRoomPage = () => {
     }
   };
 
-  const handleDeletePhoto = async (url) => {
+  const handleDeletePhoto = async (target) => {
+    if (target && target.pendingIdx != null) {
+      setPendingFiles((prev) => prev.filter((_, i) => i !== target.pendingIdx));
+      setConfirmDelete(null);
+      return;
+    }
     try {
       const room = await apiFetch(`/rooms/${roomId}/photo`, {
         method: "DELETE", token,
-        body: { photoUrl: url },
+        body: { photoUrl: target.url },
       });
       setPhotos(room.photos || []);
     } catch (err) {
@@ -100,7 +111,18 @@ export const AdminRoomPage = () => {
       if (isEdit) {
         await apiFetch(`/rooms/${roomId}`, { method: "PUT", token, body: payload });
       } else {
-        await apiFetch("/rooms", { method: "POST", token, body: payload });
+        const created = await apiFetch("/rooms", { method: "POST", token, body: payload });
+        if (pendingFiles.length > 0 && created?.id) {
+          setUploading(true);
+          for (const file of pendingFiles) {
+            try {
+              await apiUpload(`/rooms/${created.id}/photo`, { file, fieldName: "photo", token });
+            } catch (err) {
+              setError(err.message);
+            }
+          }
+          setUploading(false);
+        }
       }
       navigate("/");
     } catch (err) {
@@ -120,7 +142,13 @@ export const AdminRoomPage = () => {
     }
   };
 
-  const mainPhoto = photos[0] ? toSrc(photos[0]) : null;
+  const pendingPreviews = React.useMemo(
+    () => pendingFiles.map((f) => URL.createObjectURL(f)),
+    [pendingFiles]
+  );
+  useEffect(() => () => pendingPreviews.forEach((u) => URL.revokeObjectURL(u)), [pendingPreviews]);
+
+  const mainPhoto = photos[0] ? toSrc(photos[0]) : (pendingPreviews[0] || null);
 
   return (
     <section className="page" style={{ maxWidth: 960 }}>
@@ -133,34 +161,37 @@ export const AdminRoomPage = () => {
             {mainPhoto
               ? <img src={mainPhoto} alt="" className="admin-room-main-photo__img" />
               : <div className="admin-room-main-photo__empty"
-                  onClick={isEdit ? handleAddPhoto : undefined}
-                  style={{ cursor: isEdit ? "pointer" : "default" }}>
+                  onClick={handleAddPhoto}
+                  style={{ cursor: "pointer" }}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
                     <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" fill="#bbb"/>
                     <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" stroke="#bbb" strokeWidth="1.5" fill="none"/>
                   </svg>
                   <span style={{ color: "#9ca3af", fontSize: 14, marginTop: 6, textAlign: "center", padding: "0 12px" }}>
-                    {isEdit ? "Legg til bilete" : "Lagre rommet først for å leggje til bilete"}
+                    Legg til bilete
                   </span>
                 </div>}
           </div>
-          {isEdit && (
-            <>
-              <div className="admin-photos__thumbs">
-                {photos.map((url, i) => (
-                  <div key={i} className="admin-photos__thumb">
-                    <img src={toSrc(url)} alt="" className="admin-photos__thumb-img" />
-                    <button type="button" className="admin-photos__remove"
-                      onClick={() => setConfirmDelete(url)} title="Slett bilete">✕</button>
-                  </div>
-                ))}
-                <div className="admin-photos__thumb admin-photos__thumb--add" onClick={handleAddPhoto}>
-                  {uploading ? "..." : "+"}
-                </div>
+          <div className="admin-photos__thumbs">
+            {photos.map((url, i) => (
+              <div key={`p-${i}`} className="admin-photos__thumb">
+                <img src={toSrc(url)} alt="" className="admin-photos__thumb-img" />
+                <button type="button" className="admin-photos__remove"
+                  onClick={() => setConfirmDelete({ url })} title="Slett bilete">✕</button>
               </div>
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
-            </>
-          )}
+            ))}
+            {pendingPreviews.map((src, i) => (
+              <div key={`f-${i}`} className="admin-photos__thumb">
+                <img src={src} alt="" className="admin-photos__thumb-img" />
+                <button type="button" className="admin-photos__remove"
+                  onClick={() => setConfirmDelete({ pendingIdx: i })} title="Slett bilete">✕</button>
+              </div>
+            ))}
+            <div className="admin-photos__thumb admin-photos__thumb--add" onClick={handleAddPhoto}>
+              {uploading ? "..." : "+"}
+            </div>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
         </div>
 
         <form className="form-card admin-room-form" onSubmit={handleSubmit}>
