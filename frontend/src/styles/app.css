@@ -444,26 +444,24 @@ body {
   .profile-avatar { margin: 0 auto; justify-self: center; }
 }
 
-/* --- Nav for small phones: 2x2 grid of larger buttons --- */
+/* --- Compact nav for small phones: icon-only admin buttons --- */
 @media (max-width: 560px) {
-  .top-nav {
+  .top-nav, .home-topbar { gap: 6px; }
+  .top-nav__right, .home-topbar__right { gap: 6px; flex-wrap: nowrap; }
+  .home-btn { padding: 8px 10px; font-size: 13px; }
+  .home-btn--icon-only { padding: 8px; width: 40px; min-width: 40px; }
+  .home-btn--icon-only .home-btn__label { display: none; }
+  .home-btn--icon-only svg { margin: 0 !important; }
+
+  /* Свободные слоты: по 2 крупных кнопки в ряд */
+  .room-slots {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .top-nav__right { display: contents; }
-  .home-btn {
-    padding: 10px 12px; font-size: 14px;
-    min-height: 48px; width: 100%;
-  }
-  .home-btn--icon-only { padding: 10px 12px; width: 100%; min-width: 0; }
-  .home-btn--icon-only .home-btn__label { display: inline; }
-
-  .home-topbar { gap: 6px; }
-  .home-topbar__right { gap: 6px; flex-wrap: nowrap; }
-
-  .top-nav .avatar-menu { justify-self: end; }
-  .top-nav .avatar-menu__btn { width: 44px; height: 44px; }
+  .btn--slot { padding: 10px; font-size: 14px; min-height: 52px; }
+  .btn--slot__date { font-size: 13px; }
+  .btn--slot__time { font-size: 13px; }
 
   /* Calendar: taller cells with 2-line labels instead of wider columns */
   .calendar-grid { font-size: 10px; }
