@@ -51,6 +51,7 @@ export const t = {
   auth_forgot_reset: "Tilbakestill",         // Кнопка: сбросить.
   auth_forgot_success: "Passordet er tilbakestilt. Logg inn med det nye passordet.",
   auth_back_to_login: "Tilbake til innlogging",
+  auth_loading: "Vent litt...",
 
   // ============= Страница комнаты =============
   room_details: "Romdetaljar",               // Заголовок: детали комнаты.

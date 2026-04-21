@@ -97,6 +97,8 @@ body {
   text-decoration: none;
 }
 .btn:hover { background: #f9fafb; }
+.btn:disabled,
+.btn[disabled] { opacity: 0.6; cursor: not-allowed; }
 .btn--primary { background: #2f3338; color: #fff; border-color: #2f3338; }
 .btn--primary:hover { background: #1f2428; }
 .btn--danger { background: #ef4444; color: #fff; border-color: #ef4444; }

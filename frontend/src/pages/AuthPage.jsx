@@ -22,6 +22,8 @@ export const AuthPage = () => {
   const [forgotCode, setForgotCode] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     if (user) navigate("/");
   }, [user, navigate]);
@@ -37,7 +39,9 @@ export const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
     try {
       if (mode === "login") {
         await login(form.email, form.password);
@@ -51,23 +55,31 @@ export const AuthPage = () => {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
     try {
       await verifyEmail(pendingToken, code);
       navigate("/");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleForgotRequest = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
     try {
       await apiFetch("/auth/password/forgot", {
         method: "POST",
@@ -76,12 +88,16 @@ export const AuthPage = () => {
       setForgotStep("reset");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleForgotReset = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
     try {
       await apiFetch("/auth/password/reset", {
         method: "POST",
@@ -95,6 +111,8 @@ export const AuthPage = () => {
       setInfo(t.auth_forgot_success);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,9 +129,11 @@ export const AuthPage = () => {
           <form className="form-card" onSubmit={handleVerify}>
             <label className="form-label">
               Kode
-              <input className="form-input" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} required />
+              <input className="form-input" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} required disabled={loading} />
             </label>
-            <button className="btn btn--primary btn--full" type="submit">{t.auth_verify_btn}</button>
+            <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
+              {loading ? t.auth_loading : t.auth_verify_btn}
+            </button>
           </form>
         </section>
       </>
@@ -142,13 +162,17 @@ export const AuthPage = () => {
                   onChange={(e) => setForgotEmail(e.target.value)}
                   placeholder="namn@example.com"
                   required
+                  disabled={loading}
                 />
               </label>
-              <button className="btn btn--primary btn--full" type="submit">{t.auth_forgot_send}</button>
+              <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
+                {loading ? t.auth_loading : t.auth_forgot_send}
+              </button>
               <button
                 type="button"
                 className="btn btn--ghost btn--full"
                 onClick={() => { setForgotStep(null); setError(""); }}
+                disabled={loading}
               >
                 {t.auth_back_to_login}
               </button>
@@ -165,6 +189,7 @@ export const AuthPage = () => {
                   onChange={(e) => setForgotCode(e.target.value)}
                   maxLength={6}
                   required
+                  disabled={loading}
                 />
               </label>
               <label className="form-label">
@@ -176,13 +201,17 @@ export const AuthPage = () => {
                   onChange={(e) => setForgotNewPassword(e.target.value)}
                   minLength={6}
                   required
+                  disabled={loading}
                 />
               </label>
-              <button className="btn btn--primary btn--full" type="submit">{t.auth_forgot_reset}</button>
+              <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
+                {loading ? t.auth_loading : t.auth_forgot_reset}
+              </button>
               <button
                 type="button"
                 className="btn btn--ghost btn--full"
                 onClick={() => { setForgotStep(null); setError(""); }}
+                disabled={loading}
               >
                 {t.auth_back_to_login}
               </button>
@@ -219,19 +248,21 @@ export const AuthPage = () => {
           {mode === "register" && (
             <label className="form-label">
               {t.auth_name}
-              <input className="form-input" name="displayName" value={form.displayName} onChange={handleChange} />
+              <input className="form-input" name="displayName" value={form.displayName} onChange={handleChange} disabled={loading} />
             </label>
           )}
           <label className="form-label">
             {t.auth_email}
-            <input className="form-input" type="email" name="email" value={form.email} onChange={handleChange} placeholder="namn@example.com" required />
+            <input className="form-input" type="email" name="email" value={form.email} onChange={handleChange} placeholder="namn@example.com" required disabled={loading} />
           </label>
           <label className="form-label">
             {t.auth_password}
-            <input className="form-input" type="password" name="password" value={form.password} onChange={handleChange} required />
+            <input className="form-input" type="password" name="password" value={form.password} onChange={handleChange} required disabled={loading} />
           </label>
-          <button className="btn btn--primary btn--full" type="submit">
-            {mode === "login" ? t.auth_submit_login : t.auth_submit_register}
+          <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
+            {loading
+              ? t.auth_loading
+              : (mode === "login" ? t.auth_submit_login : t.auth_submit_register)}
           </button>
           {mode === "login" && (
             <button
@@ -243,6 +274,7 @@ export const AuthPage = () => {
                 setError("");
                 setInfo("");
               }}
+              disabled={loading}
             >
               {t.auth_forgot}
             </button>
