@@ -1,5 +1,8 @@
-// Базовый URL backend API для всех запросов.
-const API = "http://localhost:4000/api";
+const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
+export const API_BASE = `http://${API_HOST}:4000`;
+const API = `${API_BASE}/api`;
+export const resolveUploadUrl = (url) =>
+  url?.startsWith("/uploads") ? `${API_BASE}${url}` : url;
 
 // Универсальная обёртка для fetch-запросов к backend.
 // Принимает путь, метод, тело и токен авторизации.

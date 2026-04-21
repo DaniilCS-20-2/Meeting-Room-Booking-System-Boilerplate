@@ -4,6 +4,7 @@ import React from "react";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 // Импортируем провайдер и хук аутентификации.
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { resolveUploadUrl } from "./api";
 // Импортируем все страницы приложения.
 import { HomePage } from "./pages/HomePage";
 import { AuthPage } from "./pages/AuthPage";
@@ -36,7 +37,7 @@ const AvatarMenu = () => {
       <button type="button" className="avatar-menu__btn" onClick={() => setOpen(!open)}>
         {/* Если есть URL аватара — показываем фото, иначе — инициалы. */}
         {user.avatar_url
-          ? <img src={user.avatar_url.startsWith("/uploads") ? `http://localhost:4000${user.avatar_url}` : user.avatar_url} alt="" className="avatar-menu__img" />
+          ? <img src={resolveUploadUrl(user.avatar_url)} alt="" className="avatar-menu__img" />
           : <span className="avatar-menu__initials">{initials}</span>}
       </button>
       {/* Выпадающее меню отображается только при open === true. */}

@@ -1,10 +1,8 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch, apiUpload } from "../api";
+import { apiFetch, apiUpload, API_BASE } from "../api";
 import { t } from "../i18n/labels";
-
-const API_BASE = "http://localhost:4000";
 
 export const ProfilePage = () => {
   const { user, token, logout, refreshUser } = useAuth();

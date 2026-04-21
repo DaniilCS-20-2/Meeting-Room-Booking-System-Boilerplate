@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 // Импортируем хук аутентификации.
 import { useAuth } from "../context/AuthContext";
 // Импортируем обёртку для API-запросов.
-import { apiFetch } from "../api";
+import { apiFetch, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
@@ -32,8 +32,7 @@ const buildWeekGrid = (startDate) => {
 // Массив часов от 0 до 23 для строк календаря.
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-const API_BASE = "http://localhost:4000";
-const toSrc = (url) => (url?.startsWith("/uploads") ? `${API_BASE}${url}` : url);
+const toSrc = resolveUploadUrl;
 
 const RoomCarousel = ({ photos, fallback, name }) => {
   const imgs = photos.length ? photos : (fallback ? [fallback] : []);

@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch, apiUpload } from "../api";
+import { apiFetch, apiUpload, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
-const API_BASE = "http://localhost:4000";
-const toSrc = (url) => (url?.startsWith("/uploads") ? `${API_BASE}${url}` : url);
+const toSrc = resolveUploadUrl;
 
 export const AdminRoomPage = () => {
   const { roomId } = useParams();

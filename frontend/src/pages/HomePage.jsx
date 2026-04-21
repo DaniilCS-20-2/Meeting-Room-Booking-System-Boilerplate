@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 // Импортируем хук аутентификации для проверки статуса пользователя.
 import { useAuth } from "../context/AuthContext";
 // Импортируем обёртку для API-запросов к backend.
-import { apiFetch } from "../api";
+import { apiFetch, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
@@ -89,7 +89,7 @@ export const HomePage = () => {
           )}
           <button type="button" className="avatar-btn" onClick={() => navigate("/profile")}>
             {user.avatar_url
-              ? <img src={user.avatar_url.startsWith("/uploads") ? `http://localhost:4000${user.avatar_url}` : user.avatar_url} alt="" className="avatar-btn__img" />
+              ? <img src={resolveUploadUrl(user.avatar_url)} alt="" className="avatar-btn__img" />
               : <span className="avatar-btn__initials">{initials}</span>}
           </button>
         </div>
@@ -128,8 +128,7 @@ export const HomePage = () => {
                 {(() => {
                   const cover = (room.photos && room.photos[0]) || room.photo_url;
                   if (!cover) return <div className="home-card__media" />;
-                  const src = cover.startsWith("/uploads") ? `http://localhost:4000${cover}` : cover;
-                  return <img src={src} alt={room.name} className="home-card__media-img" />;
+                  return <img src={resolveUploadUrl(cover)} alt={room.name} className="home-card__media-img" />;
                 })()}
                 {/* Название комнаты. */}
                 <h3 className="home-card__title">{room.name}</h3>

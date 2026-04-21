@@ -23,8 +23,10 @@ const errorMiddleware = require("./middlewares/errorMiddleware");
 // Создаём экземпляр Express-приложения.
 const app = express();
 
-// Разрешаем CORS-запросы с URL фронтенда (из конфигурации).
-app.use(cors({ origin: env.frontendUrl, credentials: true }));
+app.use(cors({
+  origin: (origin, cb) => cb(null, true),
+  credentials: true,
+}));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
