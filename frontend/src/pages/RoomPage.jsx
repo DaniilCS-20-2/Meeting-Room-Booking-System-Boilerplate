@@ -271,7 +271,11 @@ export const RoomPage = () => {
   };
 
   const pickSlot = (slot) => {
-    setBookForm({ start: toLocalInput(slot.start), end: toLocalInput(slot.end) });
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const safeStart = new Date(now.getTime() + 60000);
+    const start = slot.start <= safeStart ? safeStart : slot.start;
+    setBookForm({ start: toLocalInput(start), end: toLocalInput(slot.end) });
   };
 
   // Генерируем массив дней для недельного календаря.
