@@ -60,31 +60,33 @@ export const AuthPage = () => {
 
   if (verifyStep) {
     return (
-      <section className="page page--narrow">
+      <>
         <nav className="top-nav">
-          <Link className="top-nav__link" to="/">{t.nav_home}</Link>
+          <Link className="home-btn home-btn--ghost" to="/">{t.nav_home}</Link>
         </nav>
-        <h1 className="page__title">{t.auth_verify_title}</h1>
-        <p className="helper-text">{t.auth_verify_hint}</p>
-        {error && <p className="error-text">{error}</p>}
-        <form className="form-card" onSubmit={handleVerify}>
-          <label className="form-label">
-            Kode
-            <input className="form-input" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} required />
-          </label>
-          <button className="btn btn--primary btn--full" type="submit">{t.auth_verify_btn}</button>
-        </form>
-      </section>
+        <section className="page page--narrow">
+          <h1 className="page__title">{t.auth_verify_title}</h1>
+          <p className="helper-text">{t.auth_verify_hint}</p>
+          {error && <p className="error-text">{error}</p>}
+          <form className="form-card" onSubmit={handleVerify}>
+            <label className="form-label">
+              Kode
+              <input className="form-input" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} required />
+            </label>
+            <button className="btn btn--primary btn--full" type="submit">{t.auth_verify_btn}</button>
+          </form>
+        </section>
+      </>
     );
   }
 
   return (
-    <section className="page page--narrow">
+    <>
       <nav className="top-nav">
-        <Link className="top-nav__link" to="/">{t.nav_home}</Link>
+        <Link className="home-btn home-btn--ghost" to="/">{t.nav_home}</Link>
       </nav>
-
-      <h1 className="page__title">{t.auth_title}</h1>
+      <section className="page page--narrow">
+        <h1 className="page__title">{t.auth_title}</h1>
 
       <div className="button-row">
         <button type="button" onClick={() => setMode("login")}
@@ -118,6 +120,7 @@ export const AuthPage = () => {
           {mode === "login" ? t.auth_submit_login : t.auth_submit_register}
         </button>
       </form>
-    </section>
+      </section>
+    </>
   );
 };
