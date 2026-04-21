@@ -284,7 +284,10 @@ export const RoomPage = () => {
     const slotStart = new Date(day);
     slotStart.setHours(hour, 0, 0, 0);
     const slotEnd = new Date(slotStart.getTime() + 3600000);
-    const fmt = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    // Короткий формат: «07» для 07:00 и «08:51» для не-круглого часа.
+    const fmt = (d) => d.getMinutes() === 0
+      ? String(d.getHours()).padStart(2, "0")
+      : `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
     const overlapping = bookings.filter((b) => {
       const bs = new Date(b.start_time).getTime();
@@ -298,11 +301,14 @@ export const RoomPage = () => {
     for (const b of overlapping) {
       const bs = new Date(b.start_time);
       const be = new Date(b.end_time);
-      if (bs >= slotStart && bs < slotEnd && bs.getTime() !== slotStart.getTime()) labels.push(fmt(bs));
-      if (be > slotStart && be <= slotEnd && be.getTime() !== slotEnd.getTime()) labels.push(fmt(be));
+      const bsIn = bs >= slotStart && bs < slotEnd;
+      const beIn = be > slotStart && be <= slotEnd;
+      if (bsIn && beIn) labels.push(`${fmt(bs)}–${fmt(be)}`);
+      else if (bsIn) labels.push(fmt(bs));
+      else if (beIn) labels.push(fmt(be));
     }
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    return { booked: true, past: allPast, label: [...new Set(labels)].join(" – ") };
+    return { booked: true, past: allPast, label: [...new Set(labels)].join(" · ") };
   };
 
   const fmtDate = (d) => d.toLocaleDateString("nn-NO", { day: "numeric", month: "short" });
