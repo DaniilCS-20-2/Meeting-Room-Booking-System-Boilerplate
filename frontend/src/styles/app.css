@@ -52,6 +52,7 @@ body {
   padding: 10px 16px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
+  flex-wrap: nowrap;
 }
 .top-nav__link {
   text-decoration: none;
@@ -435,8 +436,12 @@ body {
   .admin-room-times { grid-template-columns: minmax(0, 1fr); }
   .home-page__title { font-size: 24px; }
   .home-page__subtitle { font-size: 16px; }
-  .home-topbar__right { flex-wrap: wrap; justify-content: flex-end; }
+  .home-topbar { flex-wrap: nowrap; }
+  .home-topbar__right { flex-wrap: nowrap; justify-content: flex-end; }
   .user-item { flex-direction: column; align-items: flex-start; }
+
+  /* Центрируем аватар на странице профиля */
+  .profile-avatar { margin: 0 auto; justify-self: center; }
 }
 
 /* --- Compact nav for small phones: icon-only admin buttons --- */
