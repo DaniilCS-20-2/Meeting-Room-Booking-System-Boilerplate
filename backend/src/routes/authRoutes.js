@@ -13,6 +13,8 @@ router.post("/register", authController.register);
 // POST /api/auth/login — логин по email и паролю.
 router.post("/login", authController.login);
 router.post("/verify", authController.verifyEmail);
+router.post("/password/forgot", authController.forgotPassword);
+router.post("/password/reset", authController.resetPassword);
 // GET  /api/auth/me — получение данных текущего пользователя (требует JWT-токен).
 router.get("/me", authMiddleware, authController.me);
 

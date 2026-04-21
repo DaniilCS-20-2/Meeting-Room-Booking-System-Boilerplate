@@ -17,5 +17,11 @@ router.put("/users/:id", authMiddleware, rbacMiddleware(["admin"]), adminControl
 // DELETE /api/admin/users/:id — удаление пользователя.
 router.delete("/users/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.deleteUser);
 
+// Whitelist е-постов: только админ.
+router.get("/whitelist", authMiddleware, rbacMiddleware(["admin"]), adminController.getWhitelist);
+router.post("/whitelist", authMiddleware, rbacMiddleware(["admin"]), adminController.addWhitelist);
+router.put("/whitelist/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.updateWhitelistRole);
+router.delete("/whitelist/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.deleteWhitelist);
+
 // Экспортируем роутер администрирования.
 module.exports = router;

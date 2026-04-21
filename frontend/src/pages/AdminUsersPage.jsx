@@ -11,10 +11,65 @@ export const AdminUsersPage = () => {
   const [editForm, setEditForm] = useState({ displayName: "", avatarUrl: "" });
   const [confirmAction, setConfirmAction] = useState(null);
 
+  const [whitelist, setWhitelist] = useState([]);
+  const [newWlEmail, setNewWlEmail] = useState("");
+  const [newWlRole, setNewWlRole] = useState("user");
+  const [wlError, setWlError] = useState("");
+
   useEffect(() => {
     if (!token) return;
     apiFetch("/admin/users", { token }).then(setUsers).catch(() => {});
+    apiFetch("/admin/whitelist", { token }).then(setWhitelist).catch(() => {});
   }, [token]);
+
+  const handleWhitelistAdd = async (e) => {
+    e.preventDefault();
+    setWlError("");
+    try {
+      const item = await apiFetch("/admin/whitelist", {
+        method: "POST",
+        token,
+        body: { email: newWlEmail.trim(), role: newWlRole },
+      });
+      setWhitelist((prev) => {
+        const without = prev.filter((w) => w.id !== item.id);
+        return [item, ...without];
+      });
+      setNewWlEmail("");
+      setNewWlRole("user");
+    } catch (err) {
+      setWlError(err.message);
+    }
+  };
+
+  const handleWhitelistRoleChange = async (id, role) => {
+    try {
+      const updated = await apiFetch(`/admin/whitelist/${id}`, {
+        method: "PUT",
+        token,
+        body: { role },
+      });
+      setWhitelist((prev) => prev.map((w) => (w.id === id ? updated : w)));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleWhitelistDelete = (id, email) => {
+    setConfirmAction({
+      title: "Fjern e-post",
+      text: `Fjerne «${email}» frå godkjende e-postar?`,
+      action: async () => {
+        try {
+          await apiFetch(`/admin/whitelist/${id}`, { method: "DELETE", token });
+          setWhitelist((prev) => prev.filter((w) => w.id !== id));
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
 
   const handleEdit = (u) => {
     setEditingId(u.id);
@@ -81,6 +136,55 @@ export const AdminUsersPage = () => {
           </div>
         ))}
       </div>
+
+      <h2 className="subsection-title" style={{ marginTop: 32 }}>{t.admin_whitelist_title}</h2>
+      <p className="helper-text">{t.admin_whitelist_hint}</p>
+
+      <form className="whitelist-add" onSubmit={handleWhitelistAdd}>
+        <input
+          type="email"
+          className="form-input"
+          placeholder={t.admin_whitelist_email}
+          value={newWlEmail}
+          onChange={(e) => setNewWlEmail(e.target.value)}
+          required
+        />
+        <select
+          className="form-input"
+          value={newWlRole}
+          onChange={(e) => setNewWlRole(e.target.value)}
+        >
+          <option value="user">{t.admin_whitelist_role_user}</option>
+          <option value="admin">{t.admin_whitelist_role_admin}</option>
+        </select>
+        <button type="submit" className="btn btn--primary btn--small">{t.admin_whitelist_add}</button>
+      </form>
+      {wlError && <p className="error-text">{wlError}</p>}
+
+      <div className="whitelist-list">
+        {whitelist.length === 0 && <p className="helper-text">{t.admin_whitelist_empty}</p>}
+        {whitelist.map((w) => (
+          <div key={w.id} className="whitelist-item">
+            <span className="whitelist-item__email">{w.email}</span>
+            <select
+              className="form-input whitelist-item__role"
+              value={w.role}
+              onChange={(e) => handleWhitelistRoleChange(w.id, e.target.value)}
+            >
+              <option value="user">{t.admin_whitelist_role_user}</option>
+              <option value="admin">{t.admin_whitelist_role_admin}</option>
+            </select>
+            <button
+              type="button"
+              className="btn btn--small btn--danger"
+              onClick={() => handleWhitelistDelete(w.id, w.email)}
+            >
+              {t.admin_whitelist_remove}
+            </button>
+          </div>
+        ))}
+      </div>
+
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}

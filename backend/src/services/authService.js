@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const UserRepository = require("../models/userRepository");
+const WhitelistRepository = require("../models/whitelistRepository");
 const HttpError = require("../utils/httpError");
 const { sendVerificationCode } = require("../utils/mailer");
 
@@ -18,12 +19,22 @@ class AuthService {
       throw new HttpError(409, "User with this email already exists.");
     }
 
+    const whitelisted = await WhitelistRepository.findByEmail(email);
+    if (!whitelisted) {
+      throw new HttpError(403, "E-posten er ikkje godkjend for registrering.");
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     pendingRegistrations.set(email.toLowerCase(), {
-      email, displayName: displayName || "", passwordHash, code, expiresAt,
+      email,
+      displayName: displayName || "",
+      passwordHash,
+      code,
+      expiresAt,
+      role: whitelisted.role,
     });
 
     await sendVerificationCode(email, code);
@@ -66,12 +77,13 @@ class AuthService {
       throw new HttpError(409, "User with this email already exists.");
     }
 
-    const isAdmin = env.adminEmails.includes(pending.email.toLowerCase());
+    const whitelisted = await WhitelistRepository.findByEmail(pending.email);
+    const role = pending.role || (whitelisted ? whitelisted.role : "user");
     const user = await UserRepository.createUser({
       email: pending.email,
       displayName: pending.displayName,
       passwordHash: pending.passwordHash,
-      role: isAdmin ? "admin" : "user",
+      role,
     });
     await UserRepository.confirmEmail(user.id);
     pendingRegistrations.delete(emailKey);
@@ -121,6 +133,48 @@ class AuthService {
       },
       token,
     };
+  }
+
+  static async forgotPassword({ email }) {
+    if (!email) {
+      throw new HttpError(400, "Email is required.");
+    }
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      return { codeSent: true };
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await UserRepository.setVerificationCode(user.id, code, expiresAt);
+    await sendVerificationCode(user.email, code);
+
+    return { codeSent: true };
+  }
+
+  static async resetPassword({ email, code, newPassword }) {
+    if (!email || !code || !newPassword) {
+      throw new HttpError(400, "Email, code and new password are required.");
+    }
+    if (String(newPassword).length < 6) {
+      throw new HttpError(400, "Password must be at least 6 characters.");
+    }
+    const user = await UserRepository.findByEmail(email);
+    if (!user) throw new HttpError(400, "Invalid verification code.");
+
+    if (!user.verification_code) throw new HttpError(400, "Invalid verification code.");
+    if (new Date() > new Date(user.verification_expires_at)) {
+      throw new HttpError(400, "Verification code expired.");
+    }
+    if (user.verification_code !== code) {
+      throw new HttpError(400, "Invalid verification code.");
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await UserRepository.updatePassword(user.id, hash);
+    await UserRepository.confirmEmail(user.id);
+
+    return { reset: true };
   }
 
   static async me(userId) {

@@ -52,5 +52,27 @@ const me = async (req, res, next) => {
   }
 };
 
+const forgotPassword = async (req, res, next) => {
+  try {
+    const result = await AuthService.forgotPassword({ email: req.body.email });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const result = await AuthService.resetPassword({
+      email: req.body.email,
+      code: req.body.code,
+      newPassword: req.body.newPassword,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Экспортируем все контроллеры аутентификации.
-module.exports = { register, verifyEmail, login, me };
+module.exports = { register, verifyEmail, login, me, forgotPassword, resetPassword };

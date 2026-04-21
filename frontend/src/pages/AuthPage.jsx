@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api";
 import { t } from "../i18n/labels";
 
 export const AuthPage = () => {
@@ -11,9 +12,15 @@ export const AuthPage = () => {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ email: "", password: "", displayName: "" });
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [verifyStep, setVerifyStep] = useState(false);
   const [pendingToken, setPendingToken] = useState("");
   const [code, setCode] = useState("");
+
+  const [forgotStep, setForgotStep] = useState(null); // null | "request" | "reset"
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCode, setForgotCode] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
 
   useEffect(() => {
     if (user) navigate("/");
@@ -58,6 +65,39 @@ export const AuthPage = () => {
     }
   };
 
+  const handleForgotRequest = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await apiFetch("/auth/password/forgot", {
+        method: "POST",
+        body: { email: forgotEmail },
+      });
+      setForgotStep("reset");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleForgotReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await apiFetch("/auth/password/reset", {
+        method: "POST",
+        body: { email: forgotEmail, code: forgotCode, newPassword: forgotNewPassword },
+      });
+      setForgotStep(null);
+      setForgotCode("");
+      setForgotNewPassword("");
+      setMode("login");
+      setForm((prev) => ({ ...prev, email: forgotEmail, password: "" }));
+      setInfo(t.auth_forgot_success);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   if (verifyStep) {
     return (
       <>
@@ -80,6 +120,79 @@ export const AuthPage = () => {
     );
   }
 
+  if (forgotStep) {
+    return (
+      <>
+        <nav className="top-nav">
+          <Link className="home-btn home-btn--ghost" to="/">{t.nav_home}</Link>
+        </nav>
+        <section className="page page--narrow">
+          <h1 className="page__title">{t.auth_forgot_title}</h1>
+          <p className="helper-text">{t.auth_forgot_hint}</p>
+          {error && <p className="error-text">{error}</p>}
+
+          {forgotStep === "request" && (
+            <form className="form-card" onSubmit={handleForgotRequest}>
+              <label className="form-label">
+                {t.auth_email}
+                <input
+                  className="form-input"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="namn@example.com"
+                  required
+                />
+              </label>
+              <button className="btn btn--primary btn--full" type="submit">{t.auth_forgot_send}</button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--full"
+                onClick={() => { setForgotStep(null); setError(""); }}
+              >
+                {t.auth_back_to_login}
+              </button>
+            </form>
+          )}
+
+          {forgotStep === "reset" && (
+            <form className="form-card" onSubmit={handleForgotReset}>
+              <label className="form-label">
+                {t.profile_code}
+                <input
+                  className="form-input"
+                  value={forgotCode}
+                  onChange={(e) => setForgotCode(e.target.value)}
+                  maxLength={6}
+                  required
+                />
+              </label>
+              <label className="form-label">
+                {t.auth_forgot_new_password}
+                <input
+                  className="form-input"
+                  type="password"
+                  value={forgotNewPassword}
+                  onChange={(e) => setForgotNewPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </label>
+              <button className="btn btn--primary btn--full" type="submit">{t.auth_forgot_reset}</button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--full"
+                onClick={() => { setForgotStep(null); setError(""); }}
+              >
+                {t.auth_back_to_login}
+              </button>
+            </form>
+          )}
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <nav className="top-nav">
@@ -88,38 +201,53 @@ export const AuthPage = () => {
       <section className="page page--narrow">
         <h1 className="page__title">{t.auth_title}</h1>
 
-      <div className="button-row">
-        <button type="button" onClick={() => setMode("login")}
-          className={`btn ${mode === "login" ? "btn--primary" : ""}`}>
-          {t.auth_login}
-        </button>
-        <button type="button" onClick={() => setMode("register")}
-          className={`btn ${mode === "register" ? "btn--primary" : ""}`}>
-          {t.auth_register}
-        </button>
-      </div>
+        <div className="button-row">
+          <button type="button" onClick={() => setMode("login")}
+            className={`btn ${mode === "login" ? "btn--primary" : ""}`}>
+            {t.auth_login}
+          </button>
+          <button type="button" onClick={() => setMode("register")}
+            className={`btn ${mode === "register" ? "btn--primary" : ""}`}>
+            {t.auth_register}
+          </button>
+        </div>
 
-      {error && <p className="error-text">{error}</p>}
+        {error && <p className="error-text">{error}</p>}
+        {info && <p className="helper-text">{info}</p>}
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        {mode === "register" && (
+        <form className="form-card" onSubmit={handleSubmit}>
+          {mode === "register" && (
+            <label className="form-label">
+              {t.auth_name}
+              <input className="form-input" name="displayName" value={form.displayName} onChange={handleChange} />
+            </label>
+          )}
           <label className="form-label">
-            {t.auth_name}
-            <input className="form-input" name="displayName" value={form.displayName} onChange={handleChange} />
+            {t.auth_email}
+            <input className="form-input" type="email" name="email" value={form.email} onChange={handleChange} placeholder="namn@example.com" required />
           </label>
-        )}
-        <label className="form-label">
-          {t.auth_email}
-          <input className="form-input" type="email" name="email" value={form.email} onChange={handleChange} placeholder="namn@example.com" required />
-        </label>
-        <label className="form-label">
-          {t.auth_password}
-          <input className="form-input" type="password" name="password" value={form.password} onChange={handleChange} required />
-        </label>
-        <button className="btn btn--primary btn--full" type="submit">
-          {mode === "login" ? t.auth_submit_login : t.auth_submit_register}
-        </button>
-      </form>
+          <label className="form-label">
+            {t.auth_password}
+            <input className="form-input" type="password" name="password" value={form.password} onChange={handleChange} required />
+          </label>
+          <button className="btn btn--primary btn--full" type="submit">
+            {mode === "login" ? t.auth_submit_login : t.auth_submit_register}
+          </button>
+          {mode === "login" && (
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setForgotStep("request");
+                setForgotEmail(form.email);
+                setError("");
+                setInfo("");
+              }}
+            >
+              {t.auth_forgot}
+            </button>
+          )}
+        </form>
       </section>
     </>
   );

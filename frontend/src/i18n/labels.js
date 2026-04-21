@@ -43,6 +43,14 @@ export const t = {
   auth_verify_title: "Stadfest e-post",      // Заголовок: подтверждение email.
   auth_verify_hint: "Skriv inn 6-sifra koden sendt til e-posten din.",  // Подсказка: введите код.
   auth_verify_btn: "Stadfest",               // Кнопка: подтвердить.
+  auth_forgot: "Gløymt passord?",            // Ссылка: забыли пароль.
+  auth_forgot_title: "Tilbakestill passord", // Заголовок: сброс пароля.
+  auth_forgot_hint: "Skriv inn e-posten din, og vi sender ein 6-sifra kode.",
+  auth_forgot_send: "Send kode",             // Кнопка: отправить код.
+  auth_forgot_new_password: "Nytt passord",  // Метка: новый пароль.
+  auth_forgot_reset: "Tilbakestill",         // Кнопка: сбросить.
+  auth_forgot_success: "Passordet er tilbakestilt. Logg inn med det nye passordet.",
+  auth_back_to_login: "Tilbake til innlogging",
 
   // ============= Страница комнаты =============
   room_details: "Romdetaljar",               // Заголовок: детали комнаты.
@@ -107,4 +115,15 @@ export const t = {
   admin_users_edit: "Rediger",               // Кнопка: редактировать.
   admin_users_delete: "Slett",               // Кнопка: удалить.
   admin_users_save: "Lagre",                 // Кнопка: сохранить.
+
+  // ============= Админ: whitelist =============
+  admin_whitelist_title: "Godkjende e-postar",
+  admin_whitelist_hint: "Berre e-postar på denne lista kan registrere seg.",
+  admin_whitelist_email: "E-post",
+  admin_whitelist_role: "Rolle",
+  admin_whitelist_add: "Legg til",
+  admin_whitelist_remove: "Fjern",
+  admin_whitelist_empty: "Ingen e-postar i lista.",
+  admin_whitelist_role_user: "Brukar",
+  admin_whitelist_role_admin: "Admin",
 };
