@@ -6,7 +6,9 @@
 /* --- Сброс и базовая типографика --- */
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body { overflow-x: hidden; }
+/* overflow-x: clip скрывает горизонтальное переполнение без создания scroll-контекста,
+   поэтому колёсико/тачпад скроллят страницу нормально. */
+html, body { overflow-x: clip; }
 body {
   margin: 0;
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
@@ -15,8 +17,15 @@ body {
   color: #1f2937;
   background: #f3f4f6;
   -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  overscroll-behavior-y: none;
+}
+
+/* PWA/мобильные жесты: отключаем pull-to-refresh и callout только на тач-устройствах,
+   чтобы на десктопе не мешать колёсику и выделению. */
+@media (hover: none) and (pointer: coarse) {
+  body {
+    -webkit-touch-callout: none;
+    overscroll-behavior-y: none;
+  }
 }
 
 /* iOS safe-area for PWA (notch / home indicator) */
