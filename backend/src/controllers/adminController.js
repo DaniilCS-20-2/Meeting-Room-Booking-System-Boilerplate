@@ -69,6 +69,8 @@ const addWhitelist = async (req, res, next) => {
       throw new HttpError(400, "Ugyldig e-postadresse.");
     }
     const item = await WhitelistRepository.create({ email, role });
+    // Если пользователь уже зарегистрирован — синхронизируем его роль.
+    await UserRepository.updateRoleByEmail(item.email, item.role);
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     next(err);
@@ -80,6 +82,8 @@ const updateWhitelistRole = async (req, res, next) => {
     const role = req.body.role === "admin" ? "admin" : "user";
     const item = await WhitelistRepository.updateRole(req.params.id, role);
     if (!item) throw new HttpError(404, "Whitelist entry not found.");
+    // Если пользователь уже зарегистрирован — синхронизируем его роль.
+    await UserRepository.updateRoleByEmail(item.email, item.role);
     res.json({ success: true, data: item });
   } catch (err) {
     next(err);

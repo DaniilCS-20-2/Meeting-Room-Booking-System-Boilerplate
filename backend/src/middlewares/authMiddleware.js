@@ -4,9 +4,11 @@ const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 // Импортируем типизированную HTTP-ошибку.
 const HttpError = require("../utils/httpError");
+// Репозиторий пользователей — для чтения актуальной роли из БД.
+const UserRepository = require("../models/userRepository");
 
 // Middleware для проверки Bearer JWT.
-const authMiddleware = (req, _res, next) => {
+const authMiddleware = async (req, _res, next) => {
   // Получаем заголовок Authorization.
   const authHeader = req.headers.authorization || "";
   // Разбиваем строку на тип и токен.
@@ -18,20 +20,25 @@ const authMiddleware = (req, _res, next) => {
     return next(new HttpError(401, "Missing or invalid Authorization header."));
   }
 
+  let payload;
   try {
-    // Верифицируем токен с использованием секрета приложения.
-    const payload = jwt.verify(token, env.jwtSecret);
-    // Сохраняем полезную нагрузку в req.user для дальнейших middleware/контроллеров.
+    payload = jwt.verify(token, env.jwtSecret);
+  } catch (_error) {
+    return next(new HttpError(401, "Invalid or expired token."));
+  }
+
+  try {
+    // Читаем актуального пользователя из БД, чтобы изменения роли применялись
+    // сразу, без необходимости перелогиниваться.
+    const fresh = await UserRepository.findById(payload.sub);
     req.user = {
       id: payload.sub,
-      role: payload.role,
-      email: payload.email,
+      role: fresh?.role || payload.role,
+      email: fresh?.email || payload.email,
     };
-    // Передаём управление следующему обработчику.
     return next();
-  } catch (_error) {
-    // Возвращаем 401 при невалидном/просроченном токене.
-    return next(new HttpError(401, "Invalid or expired token."));
+  } catch (err) {
+    return next(err);
   }
 };
 

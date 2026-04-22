@@ -129,6 +129,17 @@ class UserRepository {
     return rows[0] || null;
   }
 
+  // Обновляем роль пользователя по email (используется при изменении whitelist).
+  static async updateRoleByEmail(email, role) {
+    const { rows } = await pool.query(
+      `UPDATE users SET role = $2, updated_at = NOW()
+       WHERE LOWER(email) = LOWER($1)
+       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at`,
+      [email, role]
+    );
+    return rows[0] || null;
+  }
+
   static async deleteUser(id) {
     // Выполняем DELETE-запрос и проверяем количество затронутых строк.
     const { rowCount } = await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
