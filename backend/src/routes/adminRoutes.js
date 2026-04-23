@@ -26,6 +26,10 @@ router.post("/companies", authMiddleware, rbacMiddleware(["admin"]), companyCont
 router.put("/companies/:id", authMiddleware, rbacMiddleware(["admin"]), companyController.update);
 router.delete("/companies/:id", authMiddleware, rbacMiddleware(["admin"]), companyController.remove);
 
+// Управление историей бронирований — только админ.
+router.delete("/bookings/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.deleteBooking);
+router.delete("/rooms/:roomId/history", authMiddleware, rbacMiddleware(["admin"]), adminController.clearRoomHistory);
+
 // Whitelist е-постов: только админ.
 router.get("/whitelist", authMiddleware, rbacMiddleware(["admin"]), adminController.getWhitelist);
 router.post("/whitelist", authMiddleware, rbacMiddleware(["admin"]), adminController.addWhitelist);

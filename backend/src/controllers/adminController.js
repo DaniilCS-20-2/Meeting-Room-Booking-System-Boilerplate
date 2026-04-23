@@ -2,6 +2,7 @@
 const UserRepository = require("../models/userRepository");
 const WhitelistRepository = require("../models/whitelistRepository");
 const CompanyRepository = require("../models/companyRepository");
+const BookingRepository = require("../models/bookingRepository");
 // Импортируем типизированную HTTP-ошибку.
 const HttpError = require("../utils/httpError");
 
@@ -118,6 +119,28 @@ const updateUserCompany = async (req, res, next) => {
   }
 };
 
+// Жёстко удаляем одно бронирование из истории (админ).
+const deleteBooking = async (req, res, next) => {
+  try {
+    const ok = await BookingRepository.hardDelete(req.params.id);
+    if (!ok) throw new HttpError(404, "Booking not found.");
+    res.json({ success: true, data: { deleted: true } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Очищаем историю комнаты — удаляем прошедшие и отменённые бронирования.
+// Активные будущие брони намеренно не трогаем.
+const clearRoomHistory = async (req, res, next) => {
+  try {
+    const deleted = await BookingRepository.clearRoomHistory(req.params.roomId);
+    res.json({ success: true, data: { deleted } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Экспортируем контроллеры администрирования.
 module.exports = {
   getAllUsers,
@@ -128,4 +151,6 @@ module.exports = {
   addWhitelist,
   updateWhitelistRole,
   deleteWhitelist,
+  deleteBooking,
+  clearRoomHistory,
 };

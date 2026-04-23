@@ -231,6 +231,40 @@ export const RoomPage = () => {
     });
   };
 
+  // Админ: жёстко удалить одну запись из истории.
+  const handleDeleteBooking = (bookingId) => {
+    setConfirmAction({
+      title: t.admin_history_delete_one,
+      text: t.admin_history_confirm_delete_one,
+      action: async () => {
+        try {
+          await apiFetch(`/admin/bookings/${bookingId}`, { method: "DELETE", token });
+          loadBookings();
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
+  // Админ: очистить всю прошлую историю для текущей комнаты.
+  const handleClearHistory = () => {
+    setConfirmAction({
+      title: t.admin_history_clear_all,
+      text: t.admin_history_confirm_clear_all,
+      action: async () => {
+        try {
+          await apiFetch(`/admin/rooms/${roomId}/history`, { method: "DELETE", token });
+          loadBookings();
+        } catch (err) {
+          alert(err.message);
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
   // Обработчик отправки нового комментария.
   const handleComment = async (e) => {
     // Предотвращаем стандартную перезагрузку страницы.
@@ -507,6 +541,14 @@ export const RoomPage = () => {
               <button type="button"
                 className={`btn btn--tiny ${historySort === "activity" ? "btn--active" : ""}`}
                 onClick={() => setHistorySort("activity")}>{t.room_sort_activity}</button>
+              {isAdmin && history.length > 0 && (
+                <button type="button"
+                  className="btn btn--tiny btn--dark"
+                  onClick={handleClearHistory}
+                  title={t.admin_history_clear_all}>
+                  {t.admin_history_clear_all}
+                </button>
+              )}
             </div>
           </div>
           {futureBookings.length > 0 && (
@@ -515,11 +557,17 @@ export const RoomPage = () => {
               {futureBookings.map((b) => (
                 <div key={b.id} className="history-item">
                   <span>{formatRange(b.start_time, b.end_time)}</span>
-                  <span className="history-item__user">{b.user_name}</span>
+                  <span className="history-item__user">{b.user_name || "—"}</span>
                   {(b.user_id === user.id || isAdmin) && (
                     <button type="button" className="btn btn--small btn--danger" onClick={() => handleCancel(b.id)}>
                       {t.room_cancel_booking}
                     </button>
+                  )}
+                  {isAdmin && (
+                    <button type="button"
+                      className="btn btn--tiny btn--dark"
+                      onClick={() => handleDeleteBooking(b.id)}
+                      title={t.admin_history_delete_one}>×</button>
                   )}
                 </div>
               ))}
@@ -532,8 +580,12 @@ export const RoomPage = () => {
                 {pastBookings.map((b) => (
                   <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
                     <span>{formatRange(b.start_time, b.end_time)}</span>
-                    <span className="history-item__user">{b.user_name}</span>
+                    <span className="history-item__user">{b.user_name || "—"}</span>
                     <span className="history-item__status">{b.status}</span>
+                    <button type="button"
+                      className="btn btn--tiny btn--dark"
+                      onClick={() => handleDeleteBooking(b.id)}
+                      title={t.admin_history_delete_one}>×</button>
                   </div>
                 ))}
               </div>

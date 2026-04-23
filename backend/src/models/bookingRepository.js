@@ -71,13 +71,17 @@ class BookingRepository {
 
   // Получаем бронирования по комнате за период (для календаря).
   static async findByRoom(roomId, { from, to } = {}) {
-    // Базовый запрос: активные бронирования с именем пользователя и цветом компании.
+    // Используем LEFT JOIN + COALESCE со snapshot'ами, чтобы бронирования
+    // продолжали отображаться после удаления пользователя/компании.
     let query = `
-      SELECT b.id, b.room_id, b.user_id, u.display_name AS user_name,
-             u.company_id, c.name AS company_name, c.color AS company_color,
+      SELECT b.id, b.room_id, b.user_id,
+             COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
+             u.company_id,
+             COALESCE(c.name,  b.company_name_snapshot)      AS company_name,
+             COALESCE(c.color, b.company_color_snapshot)     AS company_color,
              b.start_time, b.end_time, b.status, b.recurrence_group_id, b.comment, b.created_at
       FROM bookings b
-      JOIN users u ON u.id = b.user_id
+      LEFT JOIN users u ON u.id = b.user_id
       LEFT JOIN companies c ON c.id = u.company_id
       WHERE b.room_id = $1 AND b.status IN ('pending', 'confirmed')`;
     // Массив параметров запроса.
@@ -102,13 +106,17 @@ class BookingRepository {
 
   // Получаем полную историю бронирований комнаты (включая отменённые).
   static async findHistoryByRoom(roomId) {
-    // Формируем запрос без фильтра по статусу — для полной истории.
+    // LEFT JOIN + COALESCE: история сохраняется даже если пользователь/компания
+    // были удалены — тогда используем snapshot-поля из самой строки бронирования.
     const { rows } = await pool.query(
-      `SELECT b.id, b.room_id, b.user_id, u.display_name AS user_name,
-              u.company_id, c.name AS company_name, c.color AS company_color,
+      `SELECT b.id, b.room_id, b.user_id,
+              COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
+              u.company_id,
+              COALESCE(c.name,  b.company_name_snapshot)      AS company_name,
+              COALESCE(c.color, b.company_color_snapshot)     AS company_color,
               b.start_time, b.end_time, b.status, b.comment, b.created_at
        FROM bookings b
-       JOIN users u ON u.id = b.user_id
+       LEFT JOIN users u ON u.id = b.user_id
        LEFT JOIN companies c ON c.id = u.company_id
        WHERE b.room_id = $1
        ORDER BY b.start_time DESC`,
@@ -116,6 +124,27 @@ class BookingRepository {
     );
     // Возвращаем массив всех бронирований комнаты.
     return rows;
+  }
+
+  // Жёстко удаляем одно бронирование из таблицы (админ).
+  static async hardDelete(id) {
+    const { rowCount } = await pool.query(
+      `DELETE FROM bookings WHERE id = $1`,
+      [id]
+    );
+    return rowCount > 0;
+  }
+
+  // Удаляем из истории комнаты все прошедшие и отменённые бронирования
+  // (активные будущие НЕ трогаем, чтобы не сломать текущие брони).
+  static async clearRoomHistory(roomId) {
+    const { rowCount } = await pool.query(
+      `DELETE FROM bookings
+       WHERE room_id = $1
+         AND (status = 'cancelled' OR end_time < NOW())`,
+      [roomId]
+    );
+    return rowCount;
   }
 
   // Получаем бронирования конкретного пользователя.
@@ -137,9 +166,11 @@ class BookingRepository {
   static async findById(id) {
     const { rows } = await pool.query(
       `SELECT b.id, b.room_id, b.user_id, b.start_time, b.end_time, b.status, b.comment, b.created_at,
-              u.email AS user_email, u.display_name AS user_name, r.name AS room_name
+              COALESCE(u.email,        b.user_email_snapshot) AS user_email,
+              COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
+              r.name AS room_name
        FROM bookings b
-       JOIN users u ON u.id = b.user_id
+       LEFT JOIN users u ON u.id = b.user_id
        JOIN rooms r ON r.id = b.room_id
        WHERE b.id = $1`,
       [id]

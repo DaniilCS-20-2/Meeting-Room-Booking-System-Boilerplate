@@ -71,6 +71,10 @@ export const t = {
   room_back: "Tilbake",
   room_sort_time: "Tid",
   room_sort_activity: "Aktivitet",
+  admin_history_delete_one: "Slett oppføring",
+  admin_history_clear_all: "Tøm historikk",
+  admin_history_confirm_delete_one: "Slette denne oppføringa frå historikken for alltid?",
+  admin_history_confirm_clear_all: "Slette alle tidlegare og avlyste bookingar for dette rommet? Aktive, komande bookingar blir ikkje rørt.",
 
   // ============= Страница профиля =============
   profile_title: "Profil",                   // Заголовок: профиль.
