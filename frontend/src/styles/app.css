@@ -157,8 +157,10 @@ body {
 /* --- Сетка карточек --- */
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+  /* Отступ от заголовка "Moterom" до первой строки карточек. */
+  margin-top: 20px;
 }
 
 /* --- Карточка комнаты --- */
@@ -175,10 +177,10 @@ body {
   flex: 1;
 }
 .home-card__media {
-  width: 100%; height: 140px; border-radius: 6px; background: #e5e7eb; margin-bottom: 10px;
+  width: 100%; height: 210px; border-radius: 6px; background: #e5e7eb; margin-bottom: 12px;
 }
 .home-card__media-img {
-  width: 100%; height: 140px; border-radius: 6px; object-fit: cover; margin-bottom: 10px;
+  width: 100%; height: 210px; border-radius: 6px; object-fit: cover; margin-bottom: 12px;
 }
 .home-card__title { margin: 0 0 4px; font-size: 20px; color: #1f2937; }
 .home-card__text { margin: 0 0 4px; font-size: 14px; color: #6b7280; }
@@ -631,7 +633,9 @@ body {
    Мобильная адаптация
    ============================================================ */
 @media (max-width: 768px) {
-  .home-grid { grid-template-columns: 1fr; }
+  .home-grid { grid-template-columns: 1fr; margin-top: 14px; }
+  .home-card__media,
+  .home-card__media-img { height: 200px; }
   .room-top { grid-template-columns: 1fr; }
   .room-bottom { grid-template-columns: 1fr; }
   .profile-layout { grid-template-columns: 1fr; text-align: center; }
