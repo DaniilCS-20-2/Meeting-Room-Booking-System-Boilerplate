@@ -138,6 +138,12 @@ export const RoomPage = () => {
     const now = new Date();
     now.setSeconds(0, 0);
 
+    // Минимальная длительность слота берётся из настроек комнаты;
+    // если null (без ограничения) — всё равно отсеиваем слоты короче 15 минут,
+    // иначе появляются бессмысленные «окна» в 1–2 минуты.
+    const minMinutes = room?.min_booking_minutes ?? 15;
+    const minMs = Math.max(minMinutes, 15) * 60000;
+
     const activeBookings = history
       .filter((b) => b.status !== "cancelled" && new Date(b.end_time) > now)
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
@@ -168,7 +174,7 @@ export const RoomPage = () => {
         const dayEnd = new Date(slotStart);
         dayEnd.setHours(23, 59, 0, 0);
         const slotEnd = gap.end < dayEnd ? new Date(gap.end) : dayEnd;
-        if (slotEnd.getTime() - slotStart.getTime() >= 60000) {
+        if (slotEnd.getTime() - slotStart.getTime() >= minMs) {
           daySlots.push({ start: new Date(slotStart), end: new Date(slotEnd) });
         }
         const nextDay = new Date(slotStart);
@@ -180,7 +186,7 @@ export const RoomPage = () => {
     }
 
     return daySlots;
-  }, [history]);
+  }, [history, room]);
 
   // Обработчик отправки формы бронирования.
   const handleBook = async (e) => {
