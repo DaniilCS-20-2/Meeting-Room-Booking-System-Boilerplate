@@ -32,6 +32,22 @@ const buildWeekGrid = (startDate) => {
 // Массив часов от 0 до 23 для строк календаря.
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
+// Возвращаем контрастный цвет текста (чёрный/белый) для произвольного HEX-фона,
+// используя перцептивную яркость (формула Rec. 601). Нужен, чтобы подписи
+// в ячейках календаря оставались читаемыми на любом цвете компании.
+const getContrastText = (hex) => {
+  if (typeof hex !== "string") return "#fff";
+  const v = hex.trim().replace("#", "");
+  const full = v.length === 3 ? v.split("").map((c) => c + c).join("") : v;
+  if (full.length !== 6) return "#fff";
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return "#fff";
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luma > 160 ? "#111827" : "#fff";
+};
+
 const toSrc = resolveUploadUrl;
 
 const RoomCarousel = ({ photos, fallback, name }) => {
@@ -510,9 +526,11 @@ export const RoomPage = () => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d) => {
                 const info = getSlotInfo(d, h);
-                // Окрашиваем ячейку по цвету компании (если бронирование не прошло).
+                // Окрашиваем ячейку по цвету компании (если бронирование не прошло)
+                // и подбираем контрастный цвет текста, чтобы цифры читались
+                // и на тёмном, и на светлом фоне компании.
                 const cellStyle = info?.booked && !info.past && info.color
-                  ? { background: info.color, borderColor: info.color }
+                  ? { background: info.color, borderColor: info.color, color: getContrastText(info.color) }
                   : undefined;
                 return (
                   <div key={d.toISOString() + h}

@@ -609,8 +609,9 @@ body {
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* Booked calendar cells: белый текст читается на цветном фоне */
-.calendar-grid__cell--booked .calendar-grid__label { color: #fff; font-weight: 500; }
+/* Booked calendar cells: цвет подписи наследуется от ячейки —
+   родительский style={{ color }} подбирается по яркости фона компании. */
+.calendar-grid__cell--booked .calendar-grid__label { color: inherit; font-weight: 500; }
 
 @media (max-width: 560px) {
   .whitelist-add { grid-template-columns: 1fr 1fr; }
