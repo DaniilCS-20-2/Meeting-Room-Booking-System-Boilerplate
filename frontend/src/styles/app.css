@@ -344,6 +344,8 @@ body {
 }
 .history-item--past { opacity: 0.5; }
 .history-item--cancelled { opacity: 0.35; text-decoration: line-through; }
+/* Кнопки внутри отменённой записи не должны быть перечёркнуты — оставляем их кликабельно-читаемыми. */
+.history-item--cancelled .btn { text-decoration: none; opacity: 1; }
 .history-item__user { color: #6b7280; }
 .history-item__status { font-size: 12px; color: #9ca3af; }
 .history-past-list {
