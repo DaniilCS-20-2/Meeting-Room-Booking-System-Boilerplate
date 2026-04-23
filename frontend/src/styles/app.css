@@ -114,6 +114,8 @@ body {
 .btn--danger:hover { background: #dc2626; }
 .btn--dark { background: #111827; color: #fff; border-color: #111827; }
 .btn--dark:hover { background: #000; border-color: #000; }
+.btn--neutral { background: #6b7280; color: #fff; border-color: #6b7280; }
+.btn--neutral:hover { background: #4b5563; border-color: #4b5563; }
 .btn--small { padding: 4px 10px; font-size: 13px; }
 .btn--tiny { padding: 2px 6px; font-size: 12px; border-radius: 4px; }
 .btn--full { width: 100%; }

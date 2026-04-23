@@ -581,12 +581,6 @@ export const RoomPage = () => {
                       {t.room_cancel_booking}
                     </button>
                   )}
-                  {isAdmin && (
-                    <button type="button"
-                      className="btn btn--tiny btn--dark"
-                      onClick={() => handleDeleteBooking(b.id)}
-                      title={t.admin_history_delete_one}>×</button>
-                  )}
                 </div>
               ))}
             </>
@@ -601,9 +595,10 @@ export const RoomPage = () => {
                     <span className="history-item__user">{b.user_name || "—"}</span>
                     <span className="history-item__status">{b.status}</span>
                     <button type="button"
-                      className="btn btn--tiny btn--dark"
-                      onClick={() => handleDeleteBooking(b.id)}
-                      title={t.admin_history_delete_one}>×</button>
+                      className="btn btn--small btn--neutral"
+                      onClick={() => handleDeleteBooking(b.id)}>
+                      {t.admin_history_delete_one}
+                    </button>
                   </div>
                 ))}
               </div>
