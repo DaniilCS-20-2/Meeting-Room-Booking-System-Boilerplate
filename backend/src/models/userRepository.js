@@ -9,6 +9,7 @@ class UserRepository {
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.display_name, u.password_hash, u.role, u.avatar_url,
               u.email_verified, u.verification_code, u.verification_expires_at, u.created_at,
+              u.token_version,
               u.company_id, c.name AS company_name, c.color AS company_color
        FROM users u
        LEFT JOIN companies c ON c.id = u.company_id
@@ -24,6 +25,7 @@ class UserRepository {
     // Формируем SQL-запрос по первичному ключу.
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.display_name, u.role, u.avatar_url, u.email_verified, u.created_at,
+              u.token_version,
               u.company_id, c.name AS company_name, c.color AS company_color
        FROM users u
        LEFT JOIN companies c ON c.id = u.company_id
@@ -32,6 +34,16 @@ class UserRepository {
     );
     // Возвращаем пользователя или null.
     return rows[0] || null;
+  }
+
+  // Инкрементим token_version — инвалидирует все выданные ранее JWT.
+  static async bumpTokenVersion(id) {
+    const { rows } = await pool.query(
+      `UPDATE users SET token_version = token_version + 1, updated_at = NOW()
+       WHERE id = $1 RETURNING token_version`,
+      [id]
+    );
+    return rows[0]?.token_version ?? null;
   }
 
   // Создаём нового пользователя в таблице users.

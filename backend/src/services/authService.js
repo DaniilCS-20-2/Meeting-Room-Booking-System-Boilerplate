@@ -4,10 +4,27 @@ const env = require("../config/env");
 const UserRepository = require("../models/userRepository");
 const WhitelistRepository = require("../models/whitelistRepository");
 const CompanyRepository = require("../models/companyRepository");
+const PendingRegistrationRepository = require("../models/pendingRegistrationRepository");
+const VerificationCodeRepository = require("../models/verificationCodeRepository");
 const HttpError = require("../utils/httpError");
 const { sendVerificationCode } = require("../utils/mailer");
 
-const pendingRegistrations = new Map();
+// Генерирует JWT для пользователя. Добавляем tv (token_version) — если
+// пользователь сменит пароль/почту, старые токены станут невалидны.
+const signUserToken = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      role: user.role,
+      email: user.email,
+      tv: user.token_version ?? 1,
+    },
+    env.jwtSecret,
+    { expiresIn: "12h" }
+  );
+
+// 6-значный код для отправки на почту.
+const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 class AuthService {
   static async register({ email, password, displayName, companyId }) {
@@ -40,23 +57,22 @@ class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const code = generateCode();
 
-    pendingRegistrations.set(email.toLowerCase(), {
+    await PendingRegistrationRepository.upsert({
       email,
       displayName: displayName || "",
       passwordHash,
-      code,
-      expiresAt,
       role: whitelisted.role,
       companyId: resolvedCompanyId,
+      code,
+      ttlMinutes: 15,
     });
 
     await sendVerificationCode(email, code);
 
     const pendingToken = jwt.sign(
-      { email: email.toLowerCase(), type: "pending_registration" },
+      { email: String(email).toLowerCase(), type: "pending_registration" },
       env.jwtSecret,
       { expiresIn: "15m" }
     );
@@ -76,20 +92,26 @@ class AuthService {
     }
 
     const emailKey = payload.email;
-    const pending = pendingRegistrations.get(emailKey);
-    if (!pending) throw new HttpError(400, "No pending registration found. Please register again.");
-
-    if (new Date() > pending.expiresAt) {
-      pendingRegistrations.delete(emailKey);
-      throw new HttpError(400, "Verification code expired. Please register again.");
-    }
-    if (pending.code !== code) {
+    const verification = await PendingRegistrationRepository.verify(emailKey, code);
+    if (!verification.ok) {
+      if (verification.reason === "not_found") {
+        throw new HttpError(400, "No pending registration found. Please register again.");
+      }
+      if (verification.reason === "locked") {
+        throw new HttpError(429, "For mange forsøk. Prøv igjen om 15 min.");
+      }
+      if (verification.reason === "expired") {
+        await PendingRegistrationRepository.remove(emailKey);
+        throw new HttpError(400, "Verification code expired. Please register again.");
+      }
       throw new HttpError(400, "Invalid verification code.");
     }
 
+    const pending = verification.row;
+
     const existingAgain = await UserRepository.findByEmail(pending.email);
     if (existingAgain) {
-      pendingRegistrations.delete(emailKey);
+      await PendingRegistrationRepository.remove(emailKey);
       throw new HttpError(409, "User with this email already exists.");
     }
 
@@ -97,21 +119,19 @@ class AuthService {
     const role = pending.role || (whitelisted ? whitelisted.role : "user");
     const user = await UserRepository.createUser({
       email: pending.email,
-      displayName: pending.displayName,
-      passwordHash: pending.passwordHash,
+      displayName: pending.display_name,
+      passwordHash: pending.password_hash,
       role,
-      companyId: pending.companyId || null,
+      companyId: pending.company_id || null,
     });
     await UserRepository.confirmEmail(user.id);
-    pendingRegistrations.delete(emailKey);
+    await PendingRegistrationRepository.remove(emailKey);
 
-    const token = jwt.sign(
-      { sub: user.id, role: user.role, email: user.email },
-      env.jwtSecret,
-      { expiresIn: "12h" }
-    );
+    // Перечитываем пользователя, чтобы взять актуальный token_version и роль.
+    const fresh = await UserRepository.findById(user.id);
+    const token = signUserToken(fresh);
 
-    return { user, token, verified: true };
+    return { user: fresh, token, verified: true };
   }
 
   // Выполняем логин пользователя по email и паролю.
@@ -132,11 +152,7 @@ class AuthService {
       throw new HttpError(403, "Email not verified. Please register again.");
     }
 
-    const token = jwt.sign(
-      { sub: user.id, role: user.role, email: user.email },
-      env.jwtSecret,
-      { expiresIn: "12h" }
-    );
+    const token = signUserToken(user);
 
     // Возвращаем публичные данные пользователя и токен.
     return {
@@ -157,13 +173,18 @@ class AuthService {
       throw new HttpError(400, "Email is required.");
     }
     const user = await UserRepository.findByEmail(email);
+    // Обезличенный ответ — не даём перебирать существующие почты.
     if (!user) {
       return { codeSent: true };
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    await UserRepository.setVerificationCode(user.id, code, expiresAt);
+    const code = generateCode();
+    await VerificationCodeRepository.upsert({
+      userId: user.id,
+      purpose: "password_reset",
+      code,
+      ttlMinutes: 15,
+    });
     await sendVerificationCode(user.email, code);
 
     return { codeSent: true };
@@ -179,17 +200,23 @@ class AuthService {
     const user = await UserRepository.findByEmail(email);
     if (!user) throw new HttpError(400, "Invalid verification code.");
 
-    if (!user.verification_code) throw new HttpError(400, "Invalid verification code.");
-    if (new Date() > new Date(user.verification_expires_at)) {
-      throw new HttpError(400, "Verification code expired.");
-    }
-    if (user.verification_code !== code) {
+    const result = await VerificationCodeRepository.verify(user.id, "password_reset", code);
+    if (!result.ok) {
+      if (result.reason === "locked") {
+        throw new HttpError(429, "For mange forsøk. Prøv igjen seinare.");
+      }
+      if (result.reason === "expired") {
+        throw new HttpError(400, "Verification code expired.");
+      }
       throw new HttpError(400, "Invalid verification code.");
     }
 
     const hash = await bcrypt.hash(newPassword, 10);
     await UserRepository.updatePassword(user.id, hash);
     await UserRepository.confirmEmail(user.id);
+    // Сбрасываем все ранее выданные JWT.
+    await UserRepository.bumpTokenVersion(user.id);
+    await VerificationCodeRepository.consume(result.row.id);
 
     return { reset: true };
   }

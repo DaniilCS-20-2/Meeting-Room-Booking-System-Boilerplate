@@ -4,12 +4,14 @@ const express = require("express");
 const bookingController = require("../controllers/bookingController");
 // Импортируем middleware проверки JWT-токена.
 const authMiddleware = require("../middlewares/authMiddleware");
+const { validateBody } = require("../middlewares/validateMiddleware");
+const { createBookingSchema } = require("../validators/schemas");
 
 // Создаём экземпляр роутера для маршрутов бронирований.
 const router = express.Router();
 
 // POST   /api/bookings — создание бронирования (одиночного или recurring).
-router.post("/", authMiddleware, bookingController.createBooking);
+router.post("/", authMiddleware, validateBody(createBookingSchema), bookingController.createBooking);
 // GET    /api/bookings/my — бронирования текущего пользователя.
 router.get("/my", authMiddleware, bookingController.getMy);
 // GET    /api/bookings/room/:roomId — бронирования комнаты за период (для календаря).

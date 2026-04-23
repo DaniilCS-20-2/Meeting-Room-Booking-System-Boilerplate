@@ -6,6 +6,8 @@ const commentController = require("../controllers/commentController");
 const authMiddleware = require("../middlewares/authMiddleware");
 // Импортируем middleware проверки ролей (RBAC).
 const rbacMiddleware = require("../middlewares/rbacMiddleware");
+const { validateBody } = require("../middlewares/validateMiddleware");
+const { commentCreateSchema } = require("../validators/schemas");
 
 // Создаём экземпляр роутера для маршрутов комментариев.
 const router = express.Router();
@@ -13,7 +15,7 @@ const router = express.Router();
 // GET    /api/comments/room/:roomId — получение комментариев к комнате.
 router.get("/room/:roomId", authMiddleware, commentController.getByRoom);
 // POST   /api/comments/room/:roomId — создание комментария к комнате.
-router.post("/room/:roomId", authMiddleware, commentController.create);
+router.post("/room/:roomId", authMiddleware, validateBody(commentCreateSchema), commentController.create);
 // DELETE /api/comments/:id — удаление комментария (только админ).
 router.delete("/:id", authMiddleware, rbacMiddleware(["admin"]), commentController.remove);
 

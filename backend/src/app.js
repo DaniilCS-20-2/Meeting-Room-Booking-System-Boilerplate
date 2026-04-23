@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const path = require("path");
 // Импортируем конфигурацию окружения.
 const env = require("./config/env");
@@ -21,15 +22,61 @@ const companyRoutes = require("./routes/companyRoutes");
 
 // Импортируем глобальный middleware обработки ошибок.
 const errorMiddleware = require("./middlewares/errorMiddleware");
+// Импортируем общий rate limiter.
+const { apiLimiter } = require("./middlewares/rateLimitMiddleware");
 
 // Создаём экземпляр Express-приложения.
 const app = express();
 
-app.use(cors({
-  origin: (origin, cb) => cb(null, true),
-  credentials: true,
-}));
-app.use(express.json());
+// За reverse-proxy (nginx/Caddy) Express должен видеть реальный IP клиента,
+// иначе rate-limit будет считать все запросы с одного адреса (proxy).
+app.set("trust proxy", 1);
+
+// Helmet — базовые security headers (HSTS, X-Content-Type-Options, frameguard и т.д.).
+// CSP включаем только в проде, чтобы не мешал dev-инструментам React.
+app.use(
+  helmet({
+    contentSecurityPolicy: env.isProd
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'", ...env.allowedOrigins],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'none'"],
+          },
+        }
+      : false,
+    // HSTS включаем только в проде, иначе браузер будет требовать HTTPS и в dev.
+    hsts: env.isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+    // Отключаем COEP/CORP, иначе ломаются картинки-ссылки на /uploads из другого origin.
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+// Строгий CORS: только origin'ы из env.allowedOrigins. В dev (когда origin
+// отсутствует — например, curl/Postman) разрешаем запрос, но не в prod.
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, !env.isProd);
+      if (env.allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS: origin ${origin} is not allowed`));
+    },
+    credentials: true,
+  })
+);
+
+// Разумный лимит тела JSON — защита от DoS гигантскими payload'ами.
+app.use(express.json({ limit: "100kb" }));
+
+// Общий rate limit на весь API. Файлы /uploads и /health ниже — до лимита.
+app.use("/api", apiLimiter);
+
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Простейший healthcheck для мониторинга состояния сервиса.

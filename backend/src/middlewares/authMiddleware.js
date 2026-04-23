@@ -31,10 +31,19 @@ const authMiddleware = async (req, _res, next) => {
     // Читаем актуального пользователя из БД, чтобы изменения роли применялись
     // сразу, без необходимости перелогиниваться.
     const fresh = await UserRepository.findById(payload.sub);
+    if (!fresh) {
+      return next(new HttpError(401, "User no longer exists."));
+    }
+    // Инвалидация JWT по token_version: после смены пароля/почты старые
+    // токены перестают работать.
+    if (typeof payload.tv === "number" && payload.tv !== fresh.token_version) {
+      return next(new HttpError(401, "Token has been revoked. Please sign in again."));
+    }
     req.user = {
       id: payload.sub,
-      role: fresh?.role || payload.role,
-      email: fresh?.email || payload.email,
+      role: fresh.role,
+      email: fresh.email,
+      tokenVersion: fresh.token_version,
     };
     return next();
   } catch (err) {
