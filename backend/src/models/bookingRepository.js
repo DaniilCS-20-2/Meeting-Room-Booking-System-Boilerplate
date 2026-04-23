@@ -76,6 +76,7 @@ class BookingRepository {
     let query = `
       SELECT b.id, b.room_id, b.user_id,
              COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
+             u.avatar_url AS user_avatar,
              u.company_id,
              COALESCE(c.name,  b.company_name_snapshot)      AS company_name,
              COALESCE(c.color, b.company_color_snapshot)     AS company_color,
@@ -111,6 +112,7 @@ class BookingRepository {
     const { rows } = await pool.query(
       `SELECT b.id, b.room_id, b.user_id,
               COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
+              u.avatar_url AS user_avatar,
               u.company_id,
               COALESCE(c.name,  b.company_name_snapshot)      AS company_name,
               COALESCE(c.color, b.company_color_snapshot)     AS company_color,

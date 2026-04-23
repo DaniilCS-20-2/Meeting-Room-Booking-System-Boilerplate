@@ -1,14 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch } from "../api";
+import { apiFetch, apiUpload, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+
+// Инициалы из имени/почты для плейсхолдера аватара.
+const getInitials = (name) => {
+  if (!name) return "?";
+  const parts = String(name).trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "?";
+};
 
 export const AdminUsersPage = () => {
   const { token } = useAuth();
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ displayName: "", avatarUrl: "" });
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileRef = useRef(null);
   const [confirmAction, setConfirmAction] = useState(null);
 
   const [whitelist, setWhitelist] = useState([]);
@@ -146,12 +155,33 @@ export const AdminUsersPage = () => {
     try {
       const updated = await apiFetch(`/admin/users/${id}`, {
         method: "PUT", token,
-        body: { displayName: editForm.displayName, avatarUrl: editForm.avatarUrl || null },
+        body: { displayName: editForm.displayName },
       });
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
       setEditingId(null);
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  // Админ выбирает файл — загружаем новый аватар для редактируемого юзера.
+  const handleAvatarPick = () => fileRef.current?.click();
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingId) return;
+    setAvatarUploading(true);
+    try {
+      const updated = await apiUpload(`/admin/users/${editingId}/avatar`, {
+        file, fieldName: "avatar", token,
+      });
+      setUsers((prev) => prev.map((u) => (u.id === editingId ? updated : u)));
+      setEditForm((p) => ({ ...p, avatarUrl: updated.avatar_url || "" }));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -179,16 +209,34 @@ export const AdminUsersPage = () => {
           <div key={u.id} className="user-item">
             {editingId === u.id ? (
               <div className="user-item__edit">
+                <button type="button"
+                  className="user-avatar user-avatar--clickable"
+                  onClick={handleAvatarPick}
+                  title={t.admin_users_change_avatar}
+                  disabled={avatarUploading}>
+                  {editForm.avatarUrl
+                    ? <img src={resolveUploadUrl(editForm.avatarUrl)} alt="" className="user-avatar__img" />
+                    : <span className="user-avatar__initials">{getInitials(editForm.displayName || u.email)}</span>}
+                  <span className="user-avatar__overlay">
+                    {avatarUploading ? "..." : t.admin_users_change_avatar_short}
+                  </span>
+                </button>
+                <input ref={fileRef} type="file" accept="image/*"
+                  style={{ display: "none" }} onChange={handleAvatarUpload} />
                 <input className="form-input" value={editForm.displayName}
                   onChange={(e) => setEditForm((p) => ({ ...p, displayName: e.target.value }))} placeholder={t.admin_users_name} />
-                <input className="form-input" value={editForm.avatarUrl}
-                  onChange={(e) => setEditForm((p) => ({ ...p, avatarUrl: e.target.value }))} placeholder="Avatar URL" />
                 <button className="btn btn--primary btn--small" onClick={() => handleSave(u.id)}>{t.admin_users_save}</button>
                 <button className="btn btn--small" onClick={() => setEditingId(null)}>Avbryt</button>
               </div>
             ) : (
               <>
                 <div className="user-item__info">
+                  {u.avatar_url
+                    ? <img src={resolveUploadUrl(u.avatar_url)} alt=""
+                        className="user-avatar user-avatar--md" />
+                    : <span className="user-avatar user-avatar--md user-avatar--placeholder">
+                        {getInitials(u.display_name || u.email)}
+                      </span>}
                   <strong>{u.display_name || u.email}</strong>
                   <span className="user-item__email">{u.email}</span>
                   <span className="user-item__role">{u.role}</span>

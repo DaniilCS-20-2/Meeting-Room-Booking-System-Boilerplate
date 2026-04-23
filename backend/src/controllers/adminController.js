@@ -119,6 +119,19 @@ const updateUserCompany = async (req, res, next) => {
   }
 };
 
+// Админ загружает аватар для произвольного пользователя.
+const uploadUserAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) throw new HttpError(400, "No file uploaded.");
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    const user = await UserRepository.adminUpdate(req.params.id, { avatarUrl });
+    if (!user) throw new HttpError(404, "User not found.");
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Жёстко удаляем одно бронирование из истории (админ).
 const deleteBooking = async (req, res, next) => {
   try {
@@ -153,4 +166,5 @@ module.exports = {
   deleteWhitelist,
   deleteBooking,
   clearRoomHistory,
+  uploadUserAvatar,
 };

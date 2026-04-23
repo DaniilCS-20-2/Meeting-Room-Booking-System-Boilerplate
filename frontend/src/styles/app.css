@@ -346,7 +346,37 @@ body {
    чтобы родительский opacity не давил на кнопку удаления внутри. */
 .history-item--past > span { opacity: 0.5; }
 .history-item--cancelled > span { opacity: 0.45; text-decoration: line-through; }
-.history-item__user { color: #6b7280; }
+.history-item__user { color: #6b7280; display: inline-flex; align-items: center; gap: 8px; }
+
+/* Универсальный стиль аватара пользователя (история, админ-лист и т.д.). */
+.user-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  object-fit: cover; flex: 0 0 auto;
+  border: 1px solid #e5e7eb; background: #f3f4f6;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #6b7280;
+}
+.user-avatar--md { width: 36px; height: 36px; font-size: 13px; }
+.user-avatar--placeholder { background: #e5e7eb; }
+.user-avatar--clickable {
+  position: relative; cursor: pointer; padding: 0;
+  width: 56px; height: 56px; font-size: 16px;
+  overflow: hidden;
+}
+.user-avatar--clickable .user-avatar__img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+}
+.user-avatar--clickable .user-avatar__initials {
+  font-size: 18px; color: #6b7280;
+}
+.user-avatar__overlay {
+  position: absolute; inset: auto 0 0 0;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 10px; text-align: center; padding: 2px 0;
+  opacity: 0; transition: opacity 0.15s ease;
+}
+.user-avatar--clickable:hover .user-avatar__overlay,
+.user-avatar--clickable:focus-visible .user-avatar__overlay { opacity: 1; }
 .history-item__company {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 13px; color: #4b5563;

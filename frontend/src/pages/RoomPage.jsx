@@ -50,6 +50,21 @@ const getContrastText = (hex) => {
 
 const toSrc = resolveUploadUrl;
 
+// Короткие инициалы из имени/почты — для плейсхолдера аватара.
+const getInitials = (name) => {
+  if (!name) return "?";
+  const parts = String(name).trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "?";
+};
+
+// Маленький аватар-кружок: фото если есть, иначе инициалы на сером фоне.
+const UserAvatar = ({ url, name, size = 26 }) => {
+  const src = url ? toSrc(url) : null;
+  const style = { width: size, height: size };
+  if (src) return <img src={src} alt="" className="user-avatar" style={style} />;
+  return <span className="user-avatar user-avatar--placeholder" style={style}>{getInitials(name)}</span>;
+};
+
 const RoomCarousel = ({ photos, fallback, name }) => {
   const imgs = photos.length ? photos : (fallback ? [fallback] : []);
   const [idx, setIdx] = useState(0);
@@ -575,7 +590,10 @@ export const RoomPage = () => {
               {futureBookings.map((b) => (
                 <div key={b.id} className="history-item">
                   <span>{formatRange(b.start_time, b.end_time)}</span>
-                  <span className="history-item__user">{b.user_name || "—"}</span>
+                  <span className="history-item__user">
+                    <UserAvatar url={b.user_avatar} name={b.user_name} />
+                    {b.user_name || "—"}
+                  </span>
                   {b.company_name && (
                     <span className="history-item__company">
                       <span className="history-item__company-dot" style={{ background: b.company_color || "#9ca3af" }} />
@@ -598,7 +616,10 @@ export const RoomPage = () => {
                 {pastBookings.map((b) => (
                   <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
                     <span>{formatRange(b.start_time, b.end_time)}</span>
-                    <span className="history-item__user">{b.user_name || "—"}</span>
+                    <span className="history-item__user">
+                      <UserAvatar url={b.user_avatar} name={b.user_name} />
+                      {b.user_name || "—"}
+                    </span>
                     {b.company_name && (
                       <span className="history-item__company">
                         <span className="history-item__company-dot" style={{ background: b.company_color || "#9ca3af" }} />

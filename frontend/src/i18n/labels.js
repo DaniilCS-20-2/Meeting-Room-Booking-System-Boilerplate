@@ -120,6 +120,8 @@ export const t = {
   admin_users_edit: "Rediger",               // Кнопка: редактировать.
   admin_users_delete: "Slett",               // Кнопка: удалить.
   admin_users_save: "Lagre",                 // Кнопка: сохранить.
+  admin_users_change_avatar: "Klikk for å endre profilbilete",
+  admin_users_change_avatar_short: "Endre",
 
   // ============= Админ: whitelist =============
   admin_whitelist_title: "Godkjende e-postar",
