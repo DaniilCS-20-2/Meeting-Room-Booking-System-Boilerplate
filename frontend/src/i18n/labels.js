@@ -140,5 +140,7 @@ export const t = {
   admin_companies_remove: "Fjern",
   admin_companies_save: "Lagre",
   admin_companies_empty: "Ingen selskap enno.",
+  admin_companies_change_color: "Endre farge",
+  admin_companies_pick_color: "Vel farge",
   company_none: "Utan selskap",
 };

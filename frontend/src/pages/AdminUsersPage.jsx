@@ -275,30 +275,36 @@ export const AdminUsersPage = () => {
       <h2 className="subsection-title" style={{ marginTop: 32 }}>{t.admin_companies_title}</h2>
       <p className="helper-text">{t.admin_companies_hint}</p>
 
-      <form className="whitelist-add" onSubmit={handleCompanyAdd}>
+      <form className="company-add" onSubmit={handleCompanyAdd}>
         <input
           type="text"
-          className="form-input"
+          className="form-input company-add__name"
           placeholder={t.admin_companies_name}
           value={newCompanyName}
           onChange={(e) => setNewCompanyName(e.target.value)}
           required
         />
-        <input
-          type="color"
-          className="form-input company-color-input"
-          value={newCompanyColor}
-          onChange={(e) => setNewCompanyColor(e.target.value)}
-          title={t.admin_companies_color}
-        />
-        <button type="submit" className="btn btn--primary btn--small">{t.admin_companies_add}</button>
+        <label
+          className="color-chip"
+          style={{ background: newCompanyColor, color: "#fff" }}
+          title={t.admin_companies_pick_color}
+        >
+          <span className="color-chip__label">{t.admin_companies_pick_color}</span>
+          <input
+            type="color"
+            className="color-chip__input"
+            value={newCompanyColor}
+            onChange={(e) => setNewCompanyColor(e.target.value)}
+          />
+        </label>
+        <button type="submit" className="btn btn--primary btn--small company-add__submit">{t.admin_companies_add}</button>
       </form>
       {companyError && <p className="error-text">{companyError}</p>}
 
-      <div className="whitelist-list">
+      <div className="company-list">
         {companies.length === 0 && <p className="helper-text">{t.admin_companies_empty}</p>}
         {companies.map((c) => (
-          <div key={c.id} className="whitelist-item">
+          <div key={c.id} className="company-item">
             <span
               className="company-dot"
               style={{ background: c.color }}
@@ -306,23 +312,29 @@ export const AdminUsersPage = () => {
             />
             <input
               type="text"
-              className="form-input whitelist-item__email"
+              className="form-input company-item__name"
               defaultValue={c.name}
               onBlur={(e) => {
                 const name = e.target.value.trim();
                 if (name && name !== c.name) handleCompanyUpdate(c.id, { name });
               }}
             />
-            <input
-              type="color"
-              className="form-input company-color-input whitelist-item__role"
-              defaultValue={c.color}
-              onChange={(e) => handleCompanyUpdate(c.id, { color: e.target.value })}
-              title={t.admin_companies_color}
-            />
+            <label
+              className="color-chip company-item__color"
+              style={{ background: c.color, color: "#fff" }}
+              title={t.admin_companies_change_color}
+            >
+              <span className="color-chip__label">{t.admin_companies_change_color}</span>
+              <input
+                type="color"
+                className="color-chip__input"
+                defaultValue={c.color}
+                onChange={(e) => handleCompanyUpdate(c.id, { color: e.target.value })}
+              />
+            </label>
             <button
               type="button"
-              className="btn btn--small btn--danger whitelist-item__remove"
+              className="btn btn--small btn--danger company-item__remove"
               onClick={() => handleCompanyDelete(c.id, c.name)}
             >
               {t.admin_companies_remove}
