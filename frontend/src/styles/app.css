@@ -597,8 +597,8 @@ body {
 /* --- Calendar legend --- */
 .calendar-legend {
   display: flex; flex-wrap: wrap; gap: 12px;
-  margin: 8px 0 12px; padding: 8px 12px;
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  margin: 8px 0 12px; padding: 4px 0;
+  background: transparent; border: 0;
   font-size: 13px; color: #374151;
 }
 .calendar-legend__item { display: inline-flex; align-items: center; gap: 6px; }
