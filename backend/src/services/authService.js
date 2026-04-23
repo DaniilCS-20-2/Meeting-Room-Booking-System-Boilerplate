@@ -11,6 +11,8 @@ const { sendVerificationCode } = require("../utils/mailer");
 
 // Генерирует JWT для пользователя. Добавляем tv (token_version) — если
 // пользователь сменит пароль/почту, старые токены станут невалидны.
+// Срок жизни — 30 дней («запомни меня»), при смене пароля/почты tv всё равно
+// мгновенно инвалидирует все старые токены.
 const signUserToken = (user) =>
   jwt.sign(
     {
@@ -20,7 +22,7 @@ const signUserToken = (user) =>
       tv: user.token_version ?? 1,
     },
     env.jwtSecret,
-    { expiresIn: "12h" }
+    { expiresIn: "30d" }
   );
 
 // 6-значный код для отправки на почту.
