@@ -342,10 +342,10 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px;
 }
-.history-item--past { opacity: 0.5; }
-.history-item--cancelled { opacity: 0.35; text-decoration: line-through; }
-/* Кнопки внутри отменённой записи не должны быть перечёркнуты — оставляем их кликабельно-читаемыми. */
-.history-item--cancelled .btn { text-decoration: none; opacity: 1; }
+/* Перечёркивание и блёклость применяем ТОЛЬКО к текстовым детям,
+   чтобы родительский opacity не давил на кнопку удаления внутри. */
+.history-item--past > span { opacity: 0.5; }
+.history-item--cancelled > span { opacity: 0.45; text-decoration: line-through; }
 .history-item__user { color: #6b7280; }
 .history-item__company {
   display: inline-flex; align-items: center; gap: 6px;
