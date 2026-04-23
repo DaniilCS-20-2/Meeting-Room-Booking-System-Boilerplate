@@ -58,12 +58,14 @@ app.use(
   })
 );
 
-// Строгий CORS: только origin'ы из env.allowedOrigins. В dev (когда origin
-// отсутствует — например, curl/Postman) разрешаем запрос, но не в prod.
+// CORS. В production — строгий allowlist из env.allowedOrigins (фронт+extra).
+// В development разрешаем любой origin: типичный кейс — открыть сайт с
+// телефона по LAN-адресу (http://192.168.x.x:5173), чтобы протестировать.
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, !env.isProd);
+      if (!env.isProd) return cb(null, true);
+      if (!origin) return cb(null, false);
       if (env.allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error(`CORS: origin ${origin} is not allowed`));
     },
