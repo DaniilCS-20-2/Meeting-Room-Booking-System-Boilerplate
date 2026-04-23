@@ -576,6 +576,12 @@ export const RoomPage = () => {
                 <div key={b.id} className="history-item">
                   <span>{formatRange(b.start_time, b.end_time)}</span>
                   <span className="history-item__user">{b.user_name || "—"}</span>
+                  {b.company_name && (
+                    <span className="history-item__company">
+                      <span className="history-item__company-dot" style={{ background: b.company_color || "#9ca3af" }} />
+                      {b.company_name}
+                    </span>
+                  )}
                   {(b.user_id === user.id || isAdmin) && (
                     <button type="button" className="btn btn--small btn--danger" onClick={() => handleCancel(b.id)}>
                       {t.room_cancel_booking}
@@ -593,6 +599,12 @@ export const RoomPage = () => {
                   <div key={b.id} className={`history-item history-item--past ${b.status === "cancelled" ? "history-item--cancelled" : ""}`}>
                     <span>{formatRange(b.start_time, b.end_time)}</span>
                     <span className="history-item__user">{b.user_name || "—"}</span>
+                    {b.company_name && (
+                      <span className="history-item__company">
+                        <span className="history-item__company-dot" style={{ background: b.company_color || "#9ca3af" }} />
+                        {b.company_name}
+                      </span>
+                    )}
                     <span className="history-item__status">{b.status}</span>
                     <button type="button"
                       className="btn btn--small btn--neutral"
