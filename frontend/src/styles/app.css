@@ -476,6 +476,50 @@ body {
 }
 .whitelist-item__role { min-height: 36px; padding: 4px 8px; }
 
+/* --- Companies (selskap) --- */
+.company-color-input {
+  width: 44px; min-width: 44px; padding: 2px; cursor: pointer;
+  border-radius: 6px; height: 36px;
+}
+.company-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.user-item__company-chip {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-item__company-select {
+  min-height: 30px; padding: 4px 6px;
+  font-size: 12px;
+  max-width: 140px;
+}
+
+/* --- Calendar legend --- */
+.calendar-legend {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  margin: 8px 0 12px; padding: 8px 12px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  font-size: 13px; color: #374151;
+}
+.calendar-legend__item { display: inline-flex; align-items: center; gap: 6px; }
+.calendar-legend__dot {
+  width: 12px; height: 12px; border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Booked calendar cells: белый текст читается на цветном фоне */
+.calendar-grid__cell--booked .calendar-grid__label { color: #fff; font-weight: 500; }
+
 @media (max-width: 560px) {
   .whitelist-add { grid-template-columns: 1fr 1fr; }
   .whitelist-add > button { grid-column: 1 / -1; }

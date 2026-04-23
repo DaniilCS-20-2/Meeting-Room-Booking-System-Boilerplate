@@ -10,12 +10,13 @@ export const AuthPage = () => {
   const { user, login, register, verifyEmail } = useAuth();
 
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ email: "", password: "", displayName: "" });
+  const [form, setForm] = useState({ email: "", password: "", displayName: "", companyId: "" });
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [verifyStep, setVerifyStep] = useState(false);
   const [pendingToken, setPendingToken] = useState("");
   const [code, setCode] = useState("");
+  const [companies, setCompanies] = useState([]);
 
   const [forgotStep, setForgotStep] = useState(null); // null | "request" | "reset"
   const [forgotEmail, setForgotEmail] = useState("");
@@ -33,6 +34,11 @@ export const AuthPage = () => {
     if (m === "login" || m === "register") setMode(m);
   }, [searchParams]);
 
+  useEffect(() => {
+    // Загружаем список компаний для селекта при регистрации (публичный эндпоинт).
+    apiFetch("/companies").then(setCompanies).catch(() => {});
+  }, []);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -47,7 +53,7 @@ export const AuthPage = () => {
         await login(form.email, form.password);
         navigate("/");
       } else {
-        const data = await register(form.email, form.password, form.displayName);
+        const data = await register(form.email, form.password, form.displayName, form.companyId || null);
         if (data.verificationRequired) {
           setPendingToken(data.pendingToken);
           setVerifyStep(true);
@@ -259,6 +265,24 @@ export const AuthPage = () => {
             {t.auth_password}
             <input className="form-input" type="password" name="password" value={form.password} onChange={handleChange} required disabled={loading} />
           </label>
+          {mode === "register" && companies.length > 0 && (
+            <label className="form-label">
+              {t.auth_company}
+              <select
+                className="form-input"
+                name="companyId"
+                value={form.companyId}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              >
+                <option value="">{t.auth_company_placeholder}</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
             {loading
               ? t.auth_loading

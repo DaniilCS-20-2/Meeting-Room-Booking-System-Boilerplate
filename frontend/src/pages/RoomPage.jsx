@@ -305,7 +305,16 @@ export const RoomPage = () => {
       else if (beIn) labels.push(fmt(be));
     }
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    return { booked: true, past: allPast, label: [...new Set(labels)].join(" · ") };
+    // Доминирующая компания в слоте — самая ранняя из пересекающихся.
+    const sorted = [...overlapping].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const primary = sorted[0];
+    return {
+      booked: true,
+      past: allPast,
+      label: [...new Set(labels)].join(" · "),
+      color: primary?.company_color || null,
+      companyName: primary?.company_name || null,
+    };
   };
 
   const fmtDate = (d) => d.toLocaleDateString("nn-NO", { day: "numeric", month: "short" });
@@ -421,6 +430,26 @@ export const RoomPage = () => {
         <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
         <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
       </div>
+      {/* Легенда: компании, чьи бронирования видимы на текущей неделе. */}
+      {(() => {
+        const seen = new Map();
+        for (const b of bookings) {
+          if (b.company_id && !seen.has(b.company_id)) {
+            seen.set(b.company_id, { name: b.company_name, color: b.company_color });
+          }
+        }
+        if (seen.size === 0) return null;
+        return (
+          <div className="calendar-legend">
+            {[...seen.entries()].map(([id, c]) => (
+              <span key={id} className="calendar-legend__item">
+                <span className="calendar-legend__dot" style={{ background: c.color }} />
+                {c.name}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
       {/* Сетка календаря: дни × часы. */}
       <div className="calendar-grid">
         {/* Заголовок: названия дней недели. */}
@@ -441,9 +470,15 @@ export const RoomPage = () => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d) => {
                 const info = getSlotInfo(d, h);
+                // Окрашиваем ячейку по цвету компании (если бронирование не прошло).
+                const cellStyle = info?.booked && !info.past && info.color
+                  ? { background: info.color, borderColor: info.color }
+                  : undefined;
                 return (
                   <div key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}>
+                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
+                    style={cellStyle}
+                    title={info?.companyName || undefined}>
                     {info?.label && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{info.label}</span>}
                   </div>
                 );

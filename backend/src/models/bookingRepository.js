@@ -71,12 +71,14 @@ class BookingRepository {
 
   // Получаем бронирования по комнате за период (для календаря).
   static async findByRoom(roomId, { from, to } = {}) {
-    // Базовый запрос: активные бронирования с именем пользователя.
+    // Базовый запрос: активные бронирования с именем пользователя и цветом компании.
     let query = `
       SELECT b.id, b.room_id, b.user_id, u.display_name AS user_name,
+             u.company_id, c.name AS company_name, c.color AS company_color,
              b.start_time, b.end_time, b.status, b.recurrence_group_id, b.comment, b.created_at
       FROM bookings b
       JOIN users u ON u.id = b.user_id
+      LEFT JOIN companies c ON c.id = u.company_id
       WHERE b.room_id = $1 AND b.status IN ('pending', 'confirmed')`;
     // Массив параметров запроса.
     const params = [roomId];
@@ -103,9 +105,11 @@ class BookingRepository {
     // Формируем запрос без фильтра по статусу — для полной истории.
     const { rows } = await pool.query(
       `SELECT b.id, b.room_id, b.user_id, u.display_name AS user_name,
+              u.company_id, c.name AS company_name, c.color AS company_color,
               b.start_time, b.end_time, b.status, b.comment, b.created_at
        FROM bookings b
        JOIN users u ON u.id = b.user_id
+       LEFT JOIN companies c ON c.id = u.company_id
        WHERE b.room_id = $1
        ORDER BY b.start_time DESC`,
       [roomId]

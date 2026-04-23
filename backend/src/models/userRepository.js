@@ -7,9 +7,12 @@ class UserRepository {
   static async findByEmail(email) {
     // Формируем SQL-запрос с LOWER() для case-insensitive поиска.
     const { rows } = await pool.query(
-      `SELECT id, email, display_name, password_hash, role, avatar_url,
-              email_verified, verification_code, verification_expires_at, created_at
-       FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+      `SELECT u.id, u.email, u.display_name, u.password_hash, u.role, u.avatar_url,
+              u.email_verified, u.verification_code, u.verification_expires_at, u.created_at,
+              u.company_id, c.name AS company_name, c.color AS company_color
+       FROM users u
+       LEFT JOIN companies c ON c.id = u.company_id
+       WHERE LOWER(u.email) = LOWER($1) LIMIT 1`,
       [email]
     );
     // Возвращаем найденного пользователя или null, если не найден.
@@ -20,8 +23,11 @@ class UserRepository {
   static async findById(id) {
     // Формируем SQL-запрос по первичному ключу.
     const { rows } = await pool.query(
-      `SELECT id, email, display_name, role, avatar_url, email_verified, created_at
-       FROM users WHERE id = $1`,
+      `SELECT u.id, u.email, u.display_name, u.role, u.avatar_url, u.email_verified, u.created_at,
+              u.company_id, c.name AS company_name, c.color AS company_color
+       FROM users u
+       LEFT JOIN companies c ON c.id = u.company_id
+       WHERE u.id = $1`,
       [id]
     );
     // Возвращаем пользователя или null.
@@ -29,13 +35,13 @@ class UserRepository {
   }
 
   // Создаём нового пользователя в таблице users.
-  static async createUser({ email, displayName, passwordHash, role = "user" }) {
+  static async createUser({ email, displayName, passwordHash, role = "user", companyId = null }) {
     // Формируем параметризованный INSERT-запрос.
     const { rows } = await pool.query(
-      `INSERT INTO users (email, display_name, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at`,
-      [email, displayName || "", passwordHash, role]
+      `INSERT INTO users (email, display_name, password_hash, role, company_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at, company_id`,
+      [email, displayName || "", passwordHash, role, companyId]
     );
     // Возвращаем созданную запись пользователя.
     return rows[0];
@@ -95,8 +101,11 @@ class UserRepository {
   static async findAll() {
     // Формируем SELECT-запрос с сортировкой по дате создания.
     const { rows } = await pool.query(
-      `SELECT id, email, display_name, role, avatar_url, email_verified, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.email, u.display_name, u.role, u.avatar_url, u.email_verified, u.created_at,
+              u.company_id, c.name AS company_name, c.color AS company_color
+       FROM users u
+       LEFT JOIN companies c ON c.id = u.company_id
+       ORDER BY u.created_at DESC`
     );
     // Возвращаем массив всех пользователей.
     return rows;
@@ -111,11 +120,24 @@ class UserRepository {
            avatar_url   = COALESCE($3, avatar_url),
            updated_at   = NOW()
        WHERE id = $1
-       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at`,
+       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at, company_id`,
       [id, displayName, avatarUrl]
     );
     // Возвращаем обновлённого пользователя или null.
     return rows[0] || null;
+  }
+
+  // Админ меняет компанию пользователя; companyId === null очищает привязку.
+  static async updateCompany(id, companyId) {
+    const { rows } = await pool.query(
+      `UPDATE users SET company_id = $2, updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, email, display_name, role, avatar_url, email_verified, created_at, company_id`,
+      [id, companyId]
+    );
+    if (!rows[0]) return null;
+    // Подгружаем имя и цвет привязанной компании для ответа.
+    return this.findById(id);
   }
 
   static async updateEmail(id, newEmail) {

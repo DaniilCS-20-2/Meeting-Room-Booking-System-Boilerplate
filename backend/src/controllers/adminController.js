@@ -1,6 +1,7 @@
 // Импортируем репозиторий пользователей для доступа к данным.
 const UserRepository = require("../models/userRepository");
 const WhitelistRepository = require("../models/whitelistRepository");
+const CompanyRepository = require("../models/companyRepository");
 // Импортируем типизированную HTTP-ошибку.
 const HttpError = require("../utils/httpError");
 
@@ -100,10 +101,28 @@ const deleteWhitelist = async (req, res, next) => {
   }
 };
 
+// Меняем компанию пользователя (админ). companyId = null очищает привязку.
+const updateUserCompany = async (req, res, next) => {
+  try {
+    const raw = req.body.companyId;
+    const companyId = raw === null || raw === "" || raw === undefined ? null : String(raw);
+    if (companyId) {
+      const exists = await CompanyRepository.findById(companyId);
+      if (!exists) throw new HttpError(404, "Selskap ikkje funne.");
+    }
+    const user = await UserRepository.updateCompany(req.params.id, companyId);
+    if (!user) throw new HttpError(404, "User not found.");
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Экспортируем контроллеры администрирования.
 module.exports = {
   getAllUsers,
   updateUser,
+  updateUserCompany,
   deleteUser,
   getWhitelist,
   addWhitelist,

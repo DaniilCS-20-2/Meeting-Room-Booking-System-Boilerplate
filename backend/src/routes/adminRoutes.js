@@ -2,6 +2,7 @@
 const express = require("express");
 // Импортируем контроллер администрирования пользователей.
 const adminController = require("../controllers/adminController");
+const companyController = require("../controllers/companyController");
 // Импортируем middleware проверки JWT-токена.
 const authMiddleware = require("../middlewares/authMiddleware");
 // Импортируем middleware проверки ролей (RBAC).
@@ -14,8 +15,16 @@ const router = express.Router();
 router.get("/users", authMiddleware, rbacMiddleware(["admin"]), adminController.getAllUsers);
 // PUT    /api/admin/users/:id — редактирование пользователя (только имя и аватар).
 router.put("/users/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.updateUser);
+// PUT    /api/admin/users/:id/company — смена компании пользователя.
+router.put("/users/:id/company", authMiddleware, rbacMiddleware(["admin"]), adminController.updateUserCompany);
 // DELETE /api/admin/users/:id — удаление пользователя.
 router.delete("/users/:id", authMiddleware, rbacMiddleware(["admin"]), adminController.deleteUser);
+
+// Управление компаниями (selskap) — только админ.
+router.get("/companies", authMiddleware, rbacMiddleware(["admin"]), companyController.getAll);
+router.post("/companies", authMiddleware, rbacMiddleware(["admin"]), companyController.create);
+router.put("/companies/:id", authMiddleware, rbacMiddleware(["admin"]), companyController.update);
+router.delete("/companies/:id", authMiddleware, rbacMiddleware(["admin"]), companyController.remove);
 
 // Whitelist е-постов: только админ.
 router.get("/whitelist", authMiddleware, rbacMiddleware(["admin"]), adminController.getWhitelist);

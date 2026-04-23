@@ -3,13 +3,14 @@ const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const UserRepository = require("../models/userRepository");
 const WhitelistRepository = require("../models/whitelistRepository");
+const CompanyRepository = require("../models/companyRepository");
 const HttpError = require("../utils/httpError");
 const { sendVerificationCode } = require("../utils/mailer");
 
 const pendingRegistrations = new Map();
 
 class AuthService {
-  static async register({ email, password, displayName }) {
+  static async register({ email, password, displayName, companyId }) {
     if (!email || !password) {
       throw new HttpError(400, "Email and password are required.");
     }
@@ -24,6 +25,20 @@ class AuthService {
       throw new HttpError(403, "E-posten er ikkje godkjend for registrering.");
     }
 
+    // Проверяем компанию: если компании существуют — выбор обязателен.
+    let resolvedCompanyId = null;
+    const companies = await CompanyRepository.findAll();
+    if (companies.length > 0) {
+      if (!companyId) {
+        throw new HttpError(400, "Vel eit selskap.");
+      }
+      const company = companies.find((c) => c.id === companyId);
+      if (!company) {
+        throw new HttpError(400, "Ugyldig selskap.");
+      }
+      resolvedCompanyId = company.id;
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -35,6 +50,7 @@ class AuthService {
       code,
       expiresAt,
       role: whitelisted.role,
+      companyId: resolvedCompanyId,
     });
 
     await sendVerificationCode(email, code);
@@ -84,6 +100,7 @@ class AuthService {
       displayName: pending.displayName,
       passwordHash: pending.passwordHash,
       role,
+      companyId: pending.companyId || null,
     });
     await UserRepository.confirmEmail(user.id);
     pendingRegistrations.delete(emailKey);

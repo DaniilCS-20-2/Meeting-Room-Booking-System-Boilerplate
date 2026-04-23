@@ -59,10 +59,10 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, companyId) => {
     const data = await apiFetch("/auth/register", {
       method: "POST",
-      body: { email, password, displayName },
+      body: { email, password, displayName, companyId: companyId || null },
     });
     return data;
   };

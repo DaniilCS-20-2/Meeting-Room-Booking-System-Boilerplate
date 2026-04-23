@@ -127,4 +127,18 @@ export const t = {
   admin_whitelist_empty: "Ingen e-postar i lista.",
   admin_whitelist_role_user: "Brukar",
   admin_whitelist_role_admin: "Admin",
+
+  // ============= Компании (selskap) =============
+  auth_company: "Selskap",
+  auth_company_placeholder: "Vel selskap",
+  admin_users_company: "Selskap",
+  admin_companies_title: "Selskap",
+  admin_companies_hint: "Legg til, endre eller fjern selskap. Fargen vert brukt i kalenderen.",
+  admin_companies_name: "Namn",
+  admin_companies_color: "Farge",
+  admin_companies_add: "Legg til",
+  admin_companies_remove: "Fjern",
+  admin_companies_save: "Lagre",
+  admin_companies_empty: "Ingen selskap enno.",
+  company_none: "Utan selskap",
 };

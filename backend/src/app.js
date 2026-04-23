@@ -16,6 +16,8 @@ const profileRoutes = require("./routes/profileRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 // Импортируем маршруты администрирования.
 const adminRoutes = require("./routes/adminRoutes");
+// Публичные маршруты компаний (список для страницы регистрации).
+const companyRoutes = require("./routes/companyRoutes");
 
 // Импортируем глобальный middleware обработки ошибок.
 const errorMiddleware = require("./middlewares/errorMiddleware");
@@ -42,6 +44,7 @@ app.use("/api/rooms", roomRoutes);       // CRUD комнат.
 app.use("/api/bookings", bookingRoutes); // Бронирования.
 app.use("/api/profile", profileRoutes);  // Профиль пользователя.
 app.use("/api/comments", commentRoutes); // Комментарии к комнатам.
+app.use("/api/companies", companyRoutes); // Публичный список компаний.
 app.use("/api/admin", adminRoutes);      // Администрирование пользователей.
 
 // Подключаем глобальный обработчик ошибок (должен быть последним middleware).

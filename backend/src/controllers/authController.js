@@ -4,8 +4,13 @@ const AuthService = require("../services/authService");
 // Контроллер регистрации нового пользователя.
 const register = async (req, res, next) => {
   try {
-    // Передаём тело запроса (email, password, displayName) в сервис.
-    const result = await AuthService.register(req.body);
+    // Передаём тело запроса (email, password, displayName, companyId) в сервис.
+    const result = await AuthService.register({
+      email: req.body.email,
+      password: req.body.password,
+      displayName: req.body.displayName,
+      companyId: req.body.companyId,
+    });
     // Отправляем 201 Created с данными пользователя и токеном.
     res.status(201).json({ success: true, data: result });
   } catch (err) {
