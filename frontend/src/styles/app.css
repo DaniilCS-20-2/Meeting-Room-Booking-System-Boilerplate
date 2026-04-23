@@ -229,7 +229,6 @@ body {
 
 /* --- Room page: top section --- */
 .room-top { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-.room-top__photo { }
 .room-top__img { width: 100%; border-radius: 10px; object-fit: cover; max-height: 360px; }
 .room-top__placeholder {
   width: 100%; height: 280px; background: #e5e7eb; border-radius: 10px;
@@ -292,7 +291,6 @@ body {
   padding: 8px 4px; text-align: center;
   font-size: 12px; font-weight: 600; color: #374151;
 }
-.calendar-grid__body { }
 .calendar-grid__row {
   display: grid;
   grid-template-columns: 60px repeat(7, minmax(0, 1fr));
@@ -303,12 +301,21 @@ body {
   display: flex; align-items: center;
 }
 .calendar-grid__cell {
-  min-height: 24px; border-left: 1px solid #f3f4f6;
+  min-height: 24px;
+  border-left: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
   position: relative; display: flex; align-items: center; justify-content: center;
   overflow: hidden; min-width: 0;
 }
 .calendar-grid__cell--booked { background: #fecaca; }
 .calendar-grid__cell--past { background: #e5e7eb; }
+/* Тонкий светлый внутренний контур разделяет подряд идущие цветные ячейки,
+   чтобы одно длинное бронирование не выглядело одним сплошным блоком. */
+.calendar-grid__cell--booked {
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 255, 255, 0.55),
+    inset -1px 0 0 rgba(255, 255, 255, 0.4);
+}
 .calendar-grid__label--past { color: #6b7280; }
 .calendar-grid__label {
   font-size: 11px; color: #7f1d1d; font-weight: 700;
@@ -545,14 +552,25 @@ body {
 
 @media (max-width: 560px) {
   /* Мобила: имя на всю ширину, цвет и «Fjern» во второй строке без растягивания. */
-  .company-add { flex-direction: column; align-items: stretch; }
+  .company-add {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  /* Важно: в column-flex `flex-basis` — это высота; поэтому сбрасываем flex
+     на auto и даём ширину 100%, иначе Namn раздувается по вертикали. */
+  .company-add__name { flex: 0 0 auto; width: 100%; height: 40px; }
+  .company-add .color-chip { align-self: stretch; }
   .company-add__submit { align-self: flex-start; }
   .company-item {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 10px;
   }
-  .company-item__name { flex: 1 1 100%; }
+  .company-item__name { flex: 1 1 100%; order: 1; }
+  .company-item .company-dot { order: 0; }
+  .company-item__color { order: 2; }
+  .company-item__remove { order: 3; }
   .color-chip { height: 32px; padding: 0 12px; font-size: 12px; }
 }
 
@@ -624,7 +642,13 @@ body {
   .home-page__subtitle { font-size: 16px; }
   .home-topbar { flex-wrap: nowrap; }
   .home-topbar__right { flex-wrap: nowrap; justify-content: flex-end; }
-  .user-item { flex-direction: column; align-items: flex-start; }
+  .user-item { flex-direction: column; align-items: stretch; gap: 8px; }
+  /* Имя, email, роль и чип компании разрешаем переносить на след. строку. */
+  .user-item__info { flex-wrap: wrap; width: 100%; gap: 6px 10px; }
+  .user-item__company-chip { max-width: 100%; }
+  /* Действия: селект компании, Rediger, Slett — равномерно во всю ширину. */
+  .user-item__actions { width: 100%; flex-wrap: wrap; gap: 6px; }
+  .user-item__company-select { max-width: none; flex: 1 1 140px; }
 
   /* Центрируем аватар на странице профиля */
   .profile-avatar { margin: 0 auto; justify-self: center; }
