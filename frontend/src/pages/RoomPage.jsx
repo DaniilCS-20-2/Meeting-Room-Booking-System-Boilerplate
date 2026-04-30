@@ -175,6 +175,72 @@ export const RoomPage = () => {
     setBookingModal({ open: true, mode: "create", initialStart: start, initialEnd: end, booking: null });
   };
 
+  // Открытие модалки из «зелёных кнопок» ближайших свободных слотов.
+  // Время уже подобрано так, чтобы не пересекаться с занятыми бронями.
+  const openCreateFromSlot = (slot) => {
+    if (!canWrite) return;
+    const now = new Date(); now.setSeconds(0, 0);
+    const safeStart = new Date(now.getTime() + 60_000);
+    const start = slot.start <= safeStart ? safeStart : slot.start;
+    setBookingModal({
+      open: true,
+      mode: "create",
+      initialStart: start,
+      initialEnd: slot.end,
+      booking: null,
+    });
+  };
+
+  // Ближайшие свободные «окошки» — берём из списка активных бронирований
+  // (для авторизованных канWrite). Анону/viewer не показываем.
+  const freeSlots = useMemo(() => {
+    if (!canWrite) return [];
+    const now = new Date();
+    now.setSeconds(0, 0);
+
+    // Минимальная длительность слота — из настроек комнаты.
+    // Если null (без ограничения) — отсеиваем «мусорные» окна короче 15 минут.
+    const minMinutes = room?.min_booking_minutes ?? 15;
+    const minMs = Math.max(minMinutes, 15) * 60_000;
+
+    const activeBookings = history
+      .filter((b) => b.status !== "cancelled" && new Date(b.end_time) > now)
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+    const endRange = new Date(now);
+    endRange.setDate(endRange.getDate() + 30);
+    endRange.setHours(23, 59, 0, 0);
+
+    const rawGaps = [];
+    let cursor = new Date(now);
+    for (const booking of activeBookings) {
+      const bStart = new Date(booking.start_time);
+      const bEnd = new Date(booking.end_time);
+      if (bStart > cursor) rawGaps.push({ start: new Date(cursor), end: new Date(bStart) });
+      if (bEnd > cursor) cursor = new Date(bEnd);
+    }
+    if (cursor < endRange) rawGaps.push({ start: new Date(cursor), end: new Date(endRange) });
+
+    const daySlots = [];
+    for (const gap of rawGaps) {
+      let slotStart = new Date(gap.start);
+      while (slotStart < gap.end && daySlots.length < 4) {
+        const dayEnd = new Date(slotStart);
+        dayEnd.setHours(23, 59, 0, 0);
+        const slotEnd = gap.end < dayEnd ? new Date(gap.end) : dayEnd;
+        if (slotEnd.getTime() - slotStart.getTime() >= minMs) {
+          daySlots.push({ start: new Date(slotStart), end: new Date(slotEnd) });
+        }
+        const nextDay = new Date(slotStart);
+        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setHours(0, 0, 0, 0);
+        slotStart = nextDay;
+      }
+      if (daySlots.length >= 4) break;
+    }
+    return daySlots;
+  }, [canWrite, history, room]);
+
   // Открытие модалки для редактирования брони — клик по своей/любой (для админа) занятой ячейке.
   const openEditModal = (booking) => {
     if (!canWrite || !booking) return;
@@ -364,11 +430,30 @@ export const RoomPage = () => {
           {/* Название комнаты. */}
           <h1 className="room-page__title">{room.name}</h1>
 
-          {/* Подсказка вместо старой формы: бронируем теперь кликом по календарю. */}
+          {/* Ближайшие свободные слоты + подсказка про кликабельный календарь. */}
           {canWrite && (
-            <p className="helper-text">
-              {t.room_book_hint_click}
-            </p>
+            <>
+              {freeSlots.length > 0 && (
+                <>
+                  <p className="room-top__label">{t.room_next_free}</p>
+                  <div className="room-slots">
+                    {freeSlots.map((slot, i) => (
+                      <button key={i} type="button" className="btn btn--slot" onClick={() => openCreateFromSlot(slot)}>
+                        <span className="btn--slot__date">
+                          {slot.start.toLocaleDateString("nn-NO", { day: "numeric", month: "short" })}
+                        </span>
+                        <span className="btn--slot__time">
+                          {slot.start.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                          {" - "}
+                          {slot.end.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <p className="helper-text">{t.room_book_hint_click}</p>
+            </>
           )}
           {isViewer && (
             <p className="helper-text">{t.viewer_hint}</p>

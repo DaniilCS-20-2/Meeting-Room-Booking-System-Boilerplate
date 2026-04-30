@@ -195,7 +195,10 @@ body {
 /* --- Модальное окно подтверждения --- */
 .confirm-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  /* Должен быть выше .modal-overlay (1100), иначе подтверждение
+     прячется за модалкой бронирования. */
+  z-index: 1200;
 }
 .confirm-dialog {
   background: #fff; border-radius: 12px; padding: 24px; max-width: 360px; width: 90%;
