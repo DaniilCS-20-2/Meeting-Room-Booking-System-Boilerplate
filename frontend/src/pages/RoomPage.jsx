@@ -252,6 +252,70 @@ export const RoomPage = () => {
 
   const closeBookingModal = () => setBookingModal((m) => ({ ...m, open: false }));
 
+  // ---- Drag-выделение по календарю ----
+  // Состояние drag: { day, hourStart, hourEnd } (диапазон часов на одном дне).
+  // Кликнул и не двигал = drag с одинаковыми hourStart/hourEnd → 1ч слот.
+  // Перетащил вниз/вверх — диапазон расширяется до отпускания мыши.
+  const [drag, setDrag] = useState(null);
+
+  // Открыть модалку по результату drag-выделения.
+  // Сначала проверяем, что весь выделенный диапазон свободен — иначе тихо отменяем.
+  const finishDrag = useCallback((d) => {
+    if (!d) return;
+    const lo = Math.min(d.hourStart, d.hourEnd);
+    const hi = Math.max(d.hourStart, d.hourEnd);
+    // Любая занятая ячейка в диапазоне → отменяем выделение.
+    for (let h = lo; h <= hi; h++) {
+      const slot = (() => {
+        const s = new Date(d.day); s.setHours(h, 0, 0, 0);
+        const e = new Date(s.getTime() + 3600000);
+        return bookings.some((b) => {
+          const bs = new Date(b.start_time).getTime();
+          const be = new Date(b.end_time).getTime();
+          return s.getTime() < be && e.getTime() > bs;
+        });
+      })();
+      if (slot) return;
+    }
+    const start = new Date(d.day); start.setHours(lo, 0, 0, 0);
+    if (start <= new Date()) return;
+    const end = new Date(d.day); end.setHours(hi + 1, 0, 0, 0);
+    setBookingModal({ open: true, mode: "create", initialStart: start, initialEnd: end, booking: null });
+  }, [bookings]);
+
+  // Глобальный mouseup: завершает drag даже если курсор ушёл с сетки.
+  useEffect(() => {
+    if (!drag) return;
+    const onUp = () => {
+      finishDrag(drag);
+      setDrag(null);
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [drag, finishDrag]);
+
+  const handleCellMouseDown = (day, hour, isFree, cellInPast) => {
+    if (!canWrite || cellInPast || !isFree) return;
+    setDrag({ day, hourStart: hour, hourEnd: hour });
+  };
+
+  const handleCellMouseEnter = (day, hour) => {
+    if (!drag) return;
+    // Drag ограничен одним днём (не размазываем выделение по неделям).
+    if (day.toDateString() !== drag.day.toDateString()) return;
+    if (hour === drag.hourEnd) return;
+    setDrag({ ...drag, hourEnd: hour });
+  };
+
+  // Проверяем, попадает ли ячейка в текущее drag-выделение (для подсветки).
+  const isInDrag = (day, hour) => {
+    if (!drag) return false;
+    if (day.toDateString() !== drag.day.toDateString()) return false;
+    const lo = Math.min(drag.hourStart, drag.hourEnd);
+    const hi = Math.max(drag.hourStart, drag.hourEnd);
+    return hour >= lo && hour <= hi;
+  };
+
   const handleCancel = (bookingId) => {
     setConfirmAction({
       title: "Avbestill booking",
@@ -549,34 +613,48 @@ export const RoomPage = () => {
                   ? (canWrite ? info.label : t.cell_busy_short)
                   : null;
 
-                // Решаем, можно ли по этой ячейке кликать.
-                // Свободная (info=null) → создание; занятая своя/любая для админа → редактирование.
+                // Решаем, как реагировать на ячейку.
+                // Свободная и в будущем → drag-/click-создание; занятая своя/любая для админа → onClick на редактирование.
                 const cellTime = new Date(d); cellTime.setHours(h, 0, 0, 0);
                 const cellInPast = cellTime <= new Date();
+                const isFree = !info?.booked;
+
                 let onCellClick = null;
+                let onCellMouseDown = null;
+                let onCellMouseEnter = null;
+                let onCellKeyDown = null;
                 let cellClickable = false;
                 if (canWrite && !cellInPast) {
-                  if (!info?.booked) {
-                    onCellClick = () => openCreateModal(d, h);
+                  if (isFree) {
+                    // На свободной ячейке: мышью/тачем — drag (одиночный «клик» = drag со start=end);
+                    // клавиатурой — Enter/Space → 1ч-слот через openCreateModal.
+                    onCellMouseDown = () => handleCellMouseDown(d, h, true, cellInPast);
+                    onCellMouseEnter = () => handleCellMouseEnter(d, h);
+                    onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCreateModal(d, h); } };
                     cellClickable = true;
                   } else if (!info.past) {
                     const primary = info.bookings?.[0];
                     const isOwner = primary?.user_id && primary.user_id === user?.id;
                     if (isOwner || isAdmin) {
                       onCellClick = () => openEditModal(primary);
+                      onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditModal(primary); } };
                       cellClickable = true;
                     }
                   }
                 }
 
+                const dragSelected = isInDrag(d, h);
+
                 return (
                   <div key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${cellClickable ? " calendar-grid__cell--clickable" : ""}`}
+                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${cellClickable ? " calendar-grid__cell--clickable" : ""}${dragSelected ? " calendar-grid__cell--drag" : ""}`}
                     style={cellStyle}
+                    onMouseDown={onCellMouseDown}
+                    onMouseEnter={onCellMouseEnter}
                     onClick={onCellClick}
                     role={cellClickable ? "button" : undefined}
                     tabIndex={cellClickable ? 0 : undefined}
-                    onKeyDown={cellClickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCellClick(); } } : undefined}>
+                    onKeyDown={onCellKeyDown}>
                     {cellLabel && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{cellLabel}</span>}
                     {/* Tooltip только для авторизованных писателей (user/admin). */}
                     {info?.booked && canWrite && (

@@ -825,6 +825,15 @@ body {
   outline-offset: -2px;
 }
 
+/* Подсветка ячеек, попадающих в текущее drag-выделение.
+   Сетка во время drag не должна выделять текст у пользователя. */
+.calendar-grid__cell--drag {
+  background: rgba(79, 70, 229, 0.18) !important;
+  outline: 2px solid #4f46e5;
+  outline-offset: -2px;
+}
+.calendar-grid__body { user-select: none; }
+
 /* --- Общий обзорный календарь на главной --- */
 .overview-cal { margin: 16px 0 32px; }
 .overview-cal__head {
