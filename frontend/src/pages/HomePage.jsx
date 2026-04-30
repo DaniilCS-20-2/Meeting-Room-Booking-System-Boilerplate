@@ -93,13 +93,6 @@ export const HomePage = () => {
         <p className="home-page__subtitle">{t.home_info}</p>
       )}
 
-      {/* Общий календарь по всем комнатам. Аноним/viewer видят только занятость
-          и название комнаты; user/admin — ещё и человека, селскап и описание. */}
-      <OverviewCalendar
-        token={token}
-        canSeeDetails={!!user && user.role !== "viewer"}
-      />
-
       {/* Сетка карточек комнат. */}
       <div className="home-grid">
         {/* Перебираем массив комнат и рендерим карточку для каждой. */}
@@ -157,6 +150,15 @@ export const HomePage = () => {
           );
         })}
       </div>
+
+      {/* Общий календарь по всем комнатам — под карточками комнат.
+          Аноним/viewer видят только занятость и название комнаты;
+          user/admin — ещё и человека, селскап и описание. */}
+      <OverviewCalendar
+        token={token}
+        canSeeDetails={!!user && user.role !== "viewer"}
+      />
+
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
