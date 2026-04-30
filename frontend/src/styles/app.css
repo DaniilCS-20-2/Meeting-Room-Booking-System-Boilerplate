@@ -123,9 +123,9 @@ body {
 .btn--full { width: 100%; }
 .btn--slot {
   background: #ecfdf5; border-color: #86efac; color: #166534;
-  font-size: 15px; padding: 14px 18px;
-  min-width: 130px; min-height: 64px;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 15px; padding: 14px 12px;
+  min-width: 0; min-height: 64px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   border-width: 1.5px;
   transition: background 0.12s, border-color 0.12s, transform 0.05s;
 }
@@ -281,7 +281,12 @@ body {
 .room-carousel__dot--active { background: #374151; }
 .room-page__title { margin: 0 0 10px; font-size: 26px; }
 .room-top__label { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #374151; }
-.room-slots { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.room-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
 .room-book-form { display: grid; gap: 10px; margin-bottom: 14px; }
 .room-info { font-size: 14px; color: #475569; margin-bottom: 10px; }
 .room-info p { margin: 2px 0; }
