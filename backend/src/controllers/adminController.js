@@ -54,6 +54,11 @@ const deleteUser = async (req, res, next) => {
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ""));
 
+// Список допустимых ролей. Любое неизвестное значение из тела запроса
+// падает обратно на 'user' — безопасный дефолт.
+const ROLES = ["user", "admin", "viewer"];
+const normalizeRole = (raw) => (ROLES.includes(raw) ? raw : "user");
+
 const getWhitelist = async (_req, res, next) => {
   try {
     const items = await WhitelistRepository.findAll();
@@ -66,13 +71,16 @@ const getWhitelist = async (_req, res, next) => {
 const addWhitelist = async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim();
-    const role = req.body.role === "admin" ? "admin" : "user";
+    const role = normalizeRole(req.body.role);
     if (!isValidEmail(email)) {
       throw new HttpError(400, "Ugyldig e-postadresse.");
     }
     const item = await WhitelistRepository.create({ email, role });
-    // Если пользователь уже зарегистрирован — синхронизируем его роль.
-    await UserRepository.updateRoleByEmail(item.email, item.role);
+    // Если пользователь уже зарегистрирован — синхронизируем его роль и
+    // инкрементим token_version, чтобы старая JWT-сессия (со старой ролью)
+    // тут же стала недействительной — никаких «остаточных прав».
+    const updatedUser = await UserRepository.updateRoleByEmail(item.email, item.role);
+    if (updatedUser) await UserRepository.bumpTokenVersion(updatedUser.id);
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     next(err);
@@ -81,11 +89,11 @@ const addWhitelist = async (req, res, next) => {
 
 const updateWhitelistRole = async (req, res, next) => {
   try {
-    const role = req.body.role === "admin" ? "admin" : "user";
+    const role = normalizeRole(req.body.role);
     const item = await WhitelistRepository.updateRole(req.params.id, role);
     if (!item) throw new HttpError(404, "Whitelist entry not found.");
-    // Если пользователь уже зарегистрирован — синхронизируем его роль.
-    await UserRepository.updateRoleByEmail(item.email, item.role);
+    const updatedUser = await UserRepository.updateRoleByEmail(item.email, item.role);
+    if (updatedUser) await UserRepository.bumpTokenVersion(updatedUser.id);
     res.json({ success: true, data: item });
   } catch (err) {
     next(err);
