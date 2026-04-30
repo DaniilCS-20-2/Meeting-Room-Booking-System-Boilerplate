@@ -413,7 +413,9 @@ export const RoomPage = () => {
   // прижимаем к одному из краёв ячейки, чтобы тултип не вылезал за сетку.
   const tipPosClass = (dayIdx, hour) => {
     let cls = "";
-    if (hour >= 16) cls += " cal-tip--up";
+    // Переключаемся «вверх» от середины суток, чтобы тултип с описанием
+    // не уезжал за нижнюю границу календаря на ячейках типа 13-15:00.
+    if (hour >= 12) cls += " cal-tip--up";
     if (dayIdx >= 5) cls += " cal-tip--align-right";
     else if (dayIdx <= 1) cls += " cal-tip--align-left";
     return cls;

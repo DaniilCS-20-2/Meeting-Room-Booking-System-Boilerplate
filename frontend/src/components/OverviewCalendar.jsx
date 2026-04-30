@@ -135,7 +135,10 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
   // колонках — прижимаем к ближайшему краю, чтобы тултип не вылезал за сетку.
   const tipPosClass = (dayIdx, hour) => {
     let cls = "";
-    if (hour >= 16) cls += " cal-tip--up";
+    // Чем ниже ячейка, тем выше «опасность» обрезаться снизу. Тултип в общем
+    // календаре может быть высоким (несколько комнат × несколько броней),
+    // поэтому переключаем направление уже с середины суток.
+    if (hour >= 12) cls += " cal-tip--up";
     if (dayIdx >= 5) cls += " cal-tip--align-right";
     else if (dayIdx <= 1) cls += " cal-tip--align-left";
     return cls;
