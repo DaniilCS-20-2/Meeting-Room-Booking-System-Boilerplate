@@ -137,21 +137,30 @@ const companyUpdateSchema = z
 
 // ============ Bookings ============
 // Фронт шлёт startDateTime/endDateTime как ISO-строки из <input type=datetime-local>.
+// recurring: пустой объект/null = одиночная бронь; иначе weekdays + untilDate
+// генерируют серию (см. BookingService.buildOccurrences).
+const recurringSchema = z
+  .object({
+    weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+    untilDate: z.string().min(5).max(40),
+  })
+  .strict();
+
 const createBookingSchema = z
   .object({
     roomId: uuidField,
     startDateTime: z.string().min(5).max(40),
     endDateTime: z.string().min(5).max(40),
     comment: optionalStr(500),
-    recurring: z
-      .object({
-        pattern: z.enum(["daily", "weekly", "monthly"]).optional(),
-        count: z.number().int().min(1).max(52).optional(),
-        until: z.string().min(5).max(40).optional(),
-      })
-      .passthrough()
-      .optional()
-      .nullable(),
+    recurring: recurringSchema.optional().nullable(),
+  })
+  .strict();
+
+// PATCH /api/bookings/:id — пока поддерживаем ТОЛЬКО укорачивание,
+// поэтому единственное поле — endDateTime. Сервис проверит, что новое end < старого end.
+const updateBookingSchema = z
+  .object({
+    endDateTime: z.string().min(5).max(40),
   })
   .strict();
 
@@ -196,6 +205,7 @@ module.exports = {
   companyCreateSchema,
   companyUpdateSchema,
   createBookingSchema,
+  updateBookingSchema,
   commentCreateSchema,
   roomCreateSchema,
 };

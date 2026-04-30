@@ -180,6 +180,38 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  // Меняем end_time существующего бронирования (используется для укорачивания).
+  // Возвращаем обновлённую запись или null, если строка не найдена.
+  static async updateEndTime(id, newEndTime) {
+    const { rows } = await pool.query(
+      `UPDATE bookings
+         SET end_time = $2,
+             updated_at = NOW()
+       WHERE id = $1
+         AND status IN ('pending', 'confirmed')
+       RETURNING id, room_id, user_id, start_time, end_time, status,
+                 recurrence_group_id, comment, created_at, updated_at`,
+      [id, newEndTime]
+    );
+    return rows[0] || null;
+  }
+
+  // Отменяем все будущие (start_time >= NOW()) бронирования из той же серии.
+  // Возвращаем число затронутых строк. Прошедшие записи серии не трогаем,
+  // чтобы не «переписать» историю.
+  static async cancelFutureSeries(recurrenceGroupId, fromTime) {
+    const { rowCount, rows } = await pool.query(
+      `UPDATE bookings
+         SET status = 'cancelled', updated_at = NOW()
+       WHERE recurrence_group_id = $1
+         AND status IN ('pending', 'confirmed')
+         AND start_time >= $2
+       RETURNING id`,
+      [recurrenceGroupId, fromTime]
+    );
+    return { count: rowCount, ids: rows.map((r) => r.id) };
+  }
+
   // Отменяем бронирование (меняем статус на 'cancelled').
   static async cancel(id) {
     // Обновляем статус только для активных бронирований (pending/confirmed).

@@ -113,5 +113,42 @@ const cancel = async (req, res, next) => {
   }
 };
 
+// PATCH /api/bookings/:id — укорачивание времени окончания.
+const updateBooking = async (req, res, next) => {
+  try {
+    const updated = await BookingService.shortenBooking({
+      bookingId: req.params.id,
+      requesterId: req.user.id,
+      requesterRole: req.user.role,
+      newEndDateTime: req.body.endDateTime,
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/bookings/:id/series — отмена всей будущей серии recurring-бронирований.
+const cancelSeries = async (req, res, next) => {
+  try {
+    const result = await BookingService.cancelSeries({
+      bookingId: req.params.id,
+      requesterId: req.user.id,
+      requesterRole: req.user.role,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Экспортируем все контроллеры бронирований.
-module.exports = { createBooking, getByRoom, getHistoryByRoom, getMy, cancel };
+module.exports = {
+  createBooking,
+  getByRoom,
+  getHistoryByRoom,
+  getMy,
+  cancel,
+  updateBooking,
+  cancelSeries,
+};

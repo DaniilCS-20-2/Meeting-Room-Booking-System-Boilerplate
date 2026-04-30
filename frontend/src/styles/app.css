@@ -790,3 +790,90 @@ body {
   font-family: inherit;
   line-height: 1.4;
 }
+
+/* --- Кликабельные ячейки календаря --- */
+.calendar-grid__cell--clickable {
+  cursor: pointer;
+}
+.calendar-grid__cell--clickable:hover {
+  outline: 2px solid #4f46e5;
+  outline-offset: -2px;
+}
+
+/* --- Модалка бронирования --- */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1100;
+  padding: 16px;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 460px;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 32px);
+}
+.modal__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.modal__title { margin: 0; font-size: 18px; font-weight: 700; color: #111827; }
+.modal__close {
+  background: transparent; border: none; font-size: 26px; line-height: 1;
+  color: #6b7280; cursor: pointer; padding: 0 4px;
+}
+.modal__close:hover { color: #111827; }
+.modal__body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal__footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; color: #374151;
+  cursor: pointer;
+}
+.recurring-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f9fafb;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.weekday-picker {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.weekday-btn {
+  min-width: 38px;
+  padding: 6px 8px;
+  font-size: 13px; font-weight: 600;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.weekday-btn:hover { background: #f3f4f6; }
+.weekday-btn--active {
+  background: #4f46e5; color: #fff; border-color: #4f46e5;
+}
+.weekday-btn--active:hover { background: #4338ca; }
+
+@media (max-width: 600px) {
+  .modal { max-width: none; }
+  .modal__footer { justify-content: stretch; }
+  .modal__footer .btn { flex: 1 1 auto; }
+}

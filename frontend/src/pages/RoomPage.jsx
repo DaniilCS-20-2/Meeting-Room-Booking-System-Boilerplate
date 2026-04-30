@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { BookingModal } from "../components/BookingModal";
 
 // Вспомогательная функция: генерируем массив из 7 дней начиная с указанной даты.
 // Используется для построения недельного календаря.
@@ -115,10 +116,9 @@ export const RoomPage = () => {
   const [comments, setComments] = useState([]);
   // State: текст нового комментария.
   const [commentText, setCommentText] = useState("");
-  // State: поля формы бронирования (начало, конец, описание/комментарий).
-  const [bookForm, setBookForm] = useState({ start: "", end: "", comment: "" });
-  // State: текст ошибки.
-  const [error, setError] = useState("");
+  // State: модалка создания/редактирования брони.
+  // open=false означает «не показывать»; в open=true сидит вся настройка для модалки.
+  const [bookingModal, setBookingModal] = useState({ open: false, mode: "create", initialStart: null, initialEnd: null, booking: null });
   // State: начало текущей недели (понедельник).
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
@@ -163,87 +163,28 @@ export const RoomPage = () => {
   };
   useEffect(loadComments, [roomId, token]);
 
-  const freeSlots = useMemo(() => {
-    const now = new Date();
-    now.setSeconds(0, 0);
-
-    // Минимальная длительность слота берётся из настроек комнаты;
-    // если null (без ограничения) — всё равно отсеиваем слоты короче 15 минут,
-    // иначе появляются бессмысленные «окна» в 1–2 минуты.
-    const minMinutes = room?.min_booking_minutes ?? 15;
-    const minMs = Math.max(minMinutes, 15) * 60000;
-
-    const activeBookings = history
-      .filter((b) => b.status !== "cancelled" && new Date(b.end_time) > now)
-      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-
-    const endRange = new Date(now);
-    endRange.setDate(endRange.getDate() + 30);
-    endRange.setHours(23, 59, 0, 0);
-
-    const rawGaps = [];
-    let cursor = new Date(now);
-
-    for (const booking of activeBookings) {
-      const bStart = new Date(booking.start_time);
-      const bEnd = new Date(booking.end_time);
-      if (bStart > cursor) {
-        rawGaps.push({ start: new Date(cursor), end: new Date(bStart) });
-      }
-      if (bEnd > cursor) cursor = new Date(bEnd);
-    }
-    if (cursor < endRange) {
-      rawGaps.push({ start: new Date(cursor), end: new Date(endRange) });
-    }
-
-    const daySlots = [];
-    for (const gap of rawGaps) {
-      let slotStart = new Date(gap.start);
-      while (slotStart < gap.end && daySlots.length < 4) {
-        const dayEnd = new Date(slotStart);
-        dayEnd.setHours(23, 59, 0, 0);
-        const slotEnd = gap.end < dayEnd ? new Date(gap.end) : dayEnd;
-        if (slotEnd.getTime() - slotStart.getTime() >= minMs) {
-          daySlots.push({ start: new Date(slotStart), end: new Date(slotEnd) });
-        }
-        const nextDay = new Date(slotStart);
-        nextDay.setDate(nextDay.getDate() + 1);
-        nextDay.setHours(0, 0, 0, 0);
-        slotStart = nextDay;
-      }
-      if (daySlots.length >= 4) break;
-    }
-
-    return daySlots;
-  }, [history, room]);
-
-  // Обработчик отправки формы бронирования.
-  const handleBook = async (e) => {
-    // Предотвращаем стандартную перезагрузку страницы.
-    e.preventDefault();
-    // Сбрасываем предыдущую ошибку.
-    setError("");
-    try {
-      // POST /api/bookings — создаём новое бронирование.
-      await apiFetch("/bookings", {
-        method: "POST",
-        token,
-        body: {
-          roomId,
-          startDateTime: bookForm.start,
-          endDateTime: bookForm.end,
-          comment: bookForm.comment?.trim() || null,
-        },
-      });
-      // Перезагружаем бронирования после успешного создания.
-      loadBookings();
-      // Очищаем форму.
-      setBookForm({ start: "", end: "", comment: "" });
-    } catch (err) {
-      // Показываем ошибку (конфликт, недопустимое время и т.д.).
-      setError(err.message);
-    }
+  // Открытие модалки для создания брони — клик по свободной ячейке.
+  // По умолчанию даём слот в 1 час, пользователь сможет подправить в модалке.
+  const openCreateModal = (day, hour) => {
+    if (!canWrite) return;
+    const start = new Date(day);
+    start.setHours(hour, 0, 0, 0);
+    // Слот в прошлом — не открываем модалку.
+    if (start <= new Date()) return;
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    setBookingModal({ open: true, mode: "create", initialStart: start, initialEnd: end, booking: null });
   };
+
+  // Открытие модалки для редактирования брони — клик по своей/любой (для админа) занятой ячейке.
+  const openEditModal = (booking) => {
+    if (!canWrite || !booking) return;
+    const isOwner = booking.user_id && booking.user_id === user?.id;
+    if (!isOwner && !isAdmin) return;
+    if (new Date(booking.end_time) <= new Date()) return; // прошлые не редактируем
+    setBookingModal({ open: true, mode: "edit", initialStart: null, initialEnd: null, booking });
+  };
+
+  const closeBookingModal = () => setBookingModal((m) => ({ ...m, open: false }));
 
   const handleCancel = (bookingId) => {
     setConfirmAction({
@@ -332,19 +273,6 @@ export const RoomPage = () => {
         setConfirmAction(null);
       },
     });
-  };
-
-  const toLocalInput = (date) => {
-    const p = (n) => String(n).padStart(2, "0");
-    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
-  };
-
-  const pickSlot = (slot) => {
-    const now = new Date();
-    now.setSeconds(0, 0);
-    const safeStart = new Date(now.getTime() + 60000);
-    const start = slot.start <= safeStart ? safeStart : slot.start;
-    setBookForm((p) => ({ ...p, start: toLocalInput(start), end: toLocalInput(slot.end) }));
   };
 
   // Генерируем массив дней для недельного календаря.
@@ -436,60 +364,11 @@ export const RoomPage = () => {
           {/* Название комнаты. */}
           <h1 className="room-page__title">{room.name}</h1>
 
-          {/* Слоты и форма бронирования — только для тех, кому можно записывать. */}
+          {/* Подсказка вместо старой формы: бронируем теперь кликом по календарю. */}
           {canWrite && (
-            <>
-              <p className="room-top__label">{t.room_next_free}</p>
-              <div className="room-slots">
-                {freeSlots.map((slot, i) => (
-                  <button key={i} type="button" className="btn btn--slot" onClick={() => pickSlot(slot)}>
-                    <span className="btn--slot__date">
-                      {slot.start.toLocaleDateString("nn-NO", { day: "numeric", month: "short" })}
-                    </span>
-                    <span className="btn--slot__time">
-                      {slot.start.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
-                      {" - "}
-                      {slot.end.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <form className="room-book-form" onSubmit={handleBook}>
-                <label className="form-label">{t.room_from}
-                  <input className="form-input" type="datetime-local" value={bookForm.start}
-                    onChange={(e) => setBookForm((p) => ({ ...p, start: e.target.value }))} required />
-                </label>
-                <label className="form-label">{t.room_to}
-                  <input className="form-input" type="datetime-local" value={bookForm.end}
-                    onChange={(e) => setBookForm((p) => ({ ...p, end: e.target.value }))} required />
-                </label>
-                {/* Поле описания бронирования (попадает в tooltip над ячейкой календаря). */}
-                <label className="form-label">{t.room_comment_label}
-                  <textarea
-                    className="form-input form-input--textarea"
-                    rows={2}
-                    maxLength={500}
-                    placeholder={t.room_comment_placeholder_book}
-                    value={bookForm.comment}
-                    onChange={(e) => setBookForm((p) => ({ ...p, comment: e.target.value }))}
-                  />
-                </label>
-                {isAdmin && (room.min_booking_minutes != null || room.max_booking_minutes != null) && (
-                  <p className="duration-hint">
-                    {room.min_booking_minutes != null && (
-                      <span>{t.room_duration_hint_min}: {room.min_booking_minutes} {t.room_duration_hint_min_unit}</span>
-                    )}
-                    {room.min_booking_minutes != null && room.max_booking_minutes != null && <span> · </span>}
-                    {room.max_booking_minutes != null && (
-                      <span>{t.room_duration_hint_max}: {room.max_booking_minutes} {t.room_duration_hint_min_unit}</span>
-                    )}
-                  </p>
-                )}
-                {error && <p className="error-text">{error}</p>}
-                <button className="btn btn--primary" type="submit">{t.room_book_btn}</button>
-              </form>
-            </>
+            <p className="helper-text">
+              {t.room_book_hint_click}
+            </p>
           )}
           {isViewer && (
             <p className="helper-text">{t.viewer_hint}</p>
@@ -573,10 +452,35 @@ export const RoomPage = () => {
                 const cellLabel = info?.booked
                   ? (canWrite ? info.label : t.cell_busy_short)
                   : null;
+
+                // Решаем, можно ли по этой ячейке кликать.
+                // Свободная (info=null) → создание; занятая своя/любая для админа → редактирование.
+                const cellTime = new Date(d); cellTime.setHours(h, 0, 0, 0);
+                const cellInPast = cellTime <= new Date();
+                let onCellClick = null;
+                let cellClickable = false;
+                if (canWrite && !cellInPast) {
+                  if (!info?.booked) {
+                    onCellClick = () => openCreateModal(d, h);
+                    cellClickable = true;
+                  } else if (!info.past) {
+                    const primary = info.bookings?.[0];
+                    const isOwner = primary?.user_id && primary.user_id === user?.id;
+                    if (isOwner || isAdmin) {
+                      onCellClick = () => openEditModal(primary);
+                      cellClickable = true;
+                    }
+                  }
+                }
+
                 return (
                   <div key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
-                    style={cellStyle}>
+                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${cellClickable ? " calendar-grid__cell--clickable" : ""}`}
+                    style={cellStyle}
+                    onClick={onCellClick}
+                    role={cellClickable ? "button" : undefined}
+                    tabIndex={cellClickable ? 0 : undefined}
+                    onKeyDown={cellClickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCellClick(); } } : undefined}>
                     {cellLabel && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{cellLabel}</span>}
                     {/* Tooltip только для авторизованных писателей (user/admin). */}
                     {info?.booked && canWrite && (
@@ -727,6 +631,20 @@ export const RoomPage = () => {
           text={confirmAction.text}
           onConfirm={confirmAction.action}
           onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {bookingModal.open && (
+        <BookingModal
+          mode={bookingModal.mode}
+          room={room}
+          booking={bookingModal.booking}
+          initialStart={bookingModal.initialStart}
+          initialEnd={bookingModal.initialEnd}
+          isAdmin={isAdmin}
+          currentUserId={user?.id || null}
+          token={token}
+          onClose={closeBookingModal}
+          onSaved={() => loadBookings()}
         />
       )}
     </section>

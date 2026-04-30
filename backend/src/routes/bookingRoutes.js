@@ -7,7 +7,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const optionalAuthMiddleware = require("../middlewares/optionalAuthMiddleware");
 const rbacMiddleware = require("../middlewares/rbacMiddleware");
 const { validateBody } = require("../middlewares/validateMiddleware");
-const { createBookingSchema } = require("../validators/schemas");
+const { createBookingSchema, updateBookingSchema } = require("../validators/schemas");
 
 // Создаём экземпляр роутера для маршрутов бронирований.
 const router = express.Router();
@@ -26,6 +26,10 @@ router.get("/room/:roomId", optionalAuthMiddleware, bookingController.getByRoom)
 router.get("/room/:roomId/history", authMiddleware, bookingController.getHistoryByRoom);
 // PATCH  /api/bookings/:id/cancel — отмена бронирования (своё или любое для админа).
 router.patch("/:id/cancel", authMiddleware, writers, bookingController.cancel);
+// PATCH  /api/bookings/:id — укорачивание времени окончания (своё или любое для админа).
+router.patch("/:id", authMiddleware, writers, validateBody(updateBookingSchema), bookingController.updateBooking);
+// DELETE /api/bookings/:id/series — отмена всей будущей recurring-серии.
+router.delete("/:id/series", authMiddleware, writers, bookingController.cancelSeries);
 
 // Экспортируем роутер бронирований.
 module.exports = router;

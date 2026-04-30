@@ -162,6 +162,81 @@ class BookingService {
       throw error;
     });
   }
+
+  // Укорачивание брони: новый end_time должен быть строго раньше старого
+  // и хотя бы на 1 минуту позже start_time. Также соблюдаем minBookingMinutes.
+  // Удлинять нельзя — это поможет защититься от случайного «затоптания» соседних слотов.
+  static async shortenBooking({ bookingId, requesterId, requesterRole, newEndDateTime }) {
+    if (!bookingId) throw new HttpError(400, "bookingId is required.");
+    if (!newEndDateTime) throw new HttpError(400, "endDateTime is required.");
+
+    const booking = await BookingRepository.findById(bookingId);
+    if (!booking) throw new HttpError(404, "Booking not found.");
+
+    if (booking.status !== "pending" && booking.status !== "confirmed") {
+      throw new HttpError(400, "Cannot edit a cancelled booking.");
+    }
+
+    const isOwner = booking.user_id === requesterId;
+    const isAdmin = requesterRole === "admin";
+    if (!isOwner && !isAdmin) {
+      throw new HttpError(403, "You can only edit your own bookings.");
+    }
+
+    const newEnd = new Date(newEndDateTime);
+    if (!isValidDate(newEnd)) {
+      throw new HttpError(400, "Invalid endDateTime.");
+    }
+
+    const oldEnd = new Date(booking.end_time);
+    const start = new Date(booking.start_time);
+
+    if (newEnd >= oldEnd) {
+      throw new HttpError(400, "New end time must be earlier than the current end time.");
+    }
+    if (newEnd <= start) {
+      throw new HttpError(400, "New end time must be after the start time.");
+    }
+    if (newEnd <= new Date()) {
+      throw new HttpError(400, "Cannot shorten a booking to a time in the past.");
+    }
+
+    const room = await RoomRepository.findById(booking.room_id);
+    if (room) {
+      const newDuration = getDurationMinutes(start, newEnd);
+      // Только нижнюю границу проверяем (укорачиваем — превысить max невозможно).
+      if (room.min_booking_minutes != null && newDuration < room.min_booking_minutes) {
+        throw new HttpError(
+          400,
+          `Booking must be at least ${room.min_booking_minutes} minutes for this room.`
+        );
+      }
+    }
+
+    const updated = await BookingRepository.updateEndTime(bookingId, newEnd);
+    if (!updated) throw new HttpError(409, "Booking could not be updated.");
+    return updated;
+  }
+
+  // Отмена всей будущей серии recurring-бронирований.
+  // Доступно владельцу серии и админу. Прошедшие вхождения не трогаем,
+  // чтобы не ломать историю.
+  static async cancelSeries({ bookingId, requesterId, requesterRole }) {
+    const booking = await BookingRepository.findById(bookingId);
+    if (!booking) throw new HttpError(404, "Booking not found.");
+    if (!booking.recurrence_group_id) {
+      throw new HttpError(400, "Booking is not part of a recurring series.");
+    }
+
+    const isOwner = booking.user_id === requesterId;
+    const isAdmin = requesterRole === "admin";
+    if (!isOwner && !isAdmin) {
+      throw new HttpError(403, "You can only cancel your own series.");
+    }
+
+    const fromTime = new Date();
+    return BookingRepository.cancelFutureSeries(booking.recurrence_group_id, fromTime);
+  }
 }
 
 // Экспортируем сервис для использования в контроллерах.
