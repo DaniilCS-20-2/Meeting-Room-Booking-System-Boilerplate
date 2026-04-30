@@ -123,12 +123,16 @@ body {
 .btn--full { width: 100%; }
 .btn--slot {
   background: #ecfdf5; border-color: #86efac; color: #166534;
-  font-size: 13px; padding: 6px 10px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 15px; padding: 14px 18px;
+  min-width: 130px; min-height: 64px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border-width: 1.5px;
+  transition: background 0.12s, border-color 0.12s, transform 0.05s;
 }
-.btn--slot:hover { background: #dcfce7; }
-.btn--slot__date { font-weight: 600; font-size: 12px; }
-.btn--slot__time { font-size: 12px; }
+.btn--slot:hover { background: #dcfce7; border-color: #4ade80; }
+.btn--slot:active { transform: translateY(1px); }
+.btn--slot__date { font-weight: 700; font-size: 14px; letter-spacing: 0.2px; }
+.btn--slot__time { font-size: 14px; }
 
 /* --- Home кнопки (login/register) --- */
 .home-btn {
@@ -277,7 +281,7 @@ body {
 .room-carousel__dot--active { background: #374151; }
 .room-page__title { margin: 0 0 10px; font-size: 26px; }
 .room-top__label { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #374151; }
-.room-slots { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.room-slots { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .room-book-form { display: grid; gap: 10px; margin-bottom: 14px; }
 .room-info { font-size: 14px; color: #475569; margin-bottom: 10px; }
 .room-info p { margin: 2px 0; }
@@ -724,7 +728,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .btn--slot { padding: 10px; font-size: 14px; min-height: 52px; }
+  .btn--slot { padding: 10px; font-size: 14px; min-width: 0; min-height: 52px; gap: 2px; }
   .btn--slot__date { font-size: 13px; }
   .btn--slot__time { font-size: 13px; }
 
