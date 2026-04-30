@@ -738,3 +738,55 @@ body {
     word-break: break-word;
   }
 }
+
+/* --- Tooltip над ячейкой календаря (имя/селскап/описание) --- */
+/* По умолчанию скрыт; показывается при ховере на занятой ячейке.
+   На ховер-ячейке снимаем overflow: hidden, чтобы тултип не обрезался
+   соседними ячейками, и поднимаем z-index. */
+.cal-tip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  background: #111827;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  min-width: 160px;
+  max-width: 240px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  z-index: 50;
+  pointer-events: none;
+}
+.cal-tip__row + .cal-tip__row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+.cal-tip__time { font-size: 11px; opacity: 0.75; margin-bottom: 2px; }
+.cal-tip__user { font-weight: 600; }
+.cal-tip__company {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; opacity: 0.9; margin-top: 2px;
+}
+.cal-tip__dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.cal-tip__comment {
+  font-size: 11px; opacity: 0.85; margin-top: 4px; font-style: italic;
+  word-break: break-word;
+}
+.calendar-grid__cell:hover { overflow: visible; z-index: 30; }
+.calendar-grid__cell:hover .cal-tip { display: block; }
+
+/* Textarea внутри формы бронирования. */
+.form-input--textarea {
+  resize: vertical;
+  min-height: 44px;
+  font-family: inherit;
+  line-height: 1.4;
+}

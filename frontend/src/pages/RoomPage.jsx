@@ -115,8 +115,8 @@ export const RoomPage = () => {
   const [comments, setComments] = useState([]);
   // State: текст нового комментария.
   const [commentText, setCommentText] = useState("");
-  // State: поля формы бронирования (начало и конец).
-  const [bookForm, setBookForm] = useState({ start: "", end: "" });
+  // State: поля формы бронирования (начало, конец, описание/комментарий).
+  const [bookForm, setBookForm] = useState({ start: "", end: "", comment: "" });
   // State: текст ошибки.
   const [error, setError] = useState("");
   // State: начало текущей недели (понедельник).
@@ -129,6 +129,10 @@ export const RoomPage = () => {
   });
 
   const isAdmin = user?.role === "admin";
+  // Viewer (read-only): видит только календарь занятости без имён/селскапов.
+  const isViewer = user?.role === "viewer";
+  // Все, кому разрешено бронировать/комментировать (т.е. НЕ viewer).
+  const canWrite = !isViewer;
   const [historySort, setHistorySort] = useState("time");
   const [confirmAction, setConfirmAction] = useState(null);
 
@@ -234,12 +238,13 @@ export const RoomPage = () => {
           roomId,
           startDateTime: bookForm.start,
           endDateTime: bookForm.end,
+          comment: bookForm.comment?.trim() || null,
         },
       });
       // Перезагружаем бронирования после успешного создания.
       loadBookings();
       // Очищаем форму.
-      setBookForm({ start: "", end: "" });
+      setBookForm({ start: "", end: "", comment: "" });
     } catch (err) {
       // Показываем ошибку (конфликт, недопустимое время и т.д.).
       setError(err.message);
@@ -345,7 +350,7 @@ export const RoomPage = () => {
     now.setSeconds(0, 0);
     const safeStart = new Date(now.getTime() + 60000);
     const start = slot.start <= safeStart ? safeStart : slot.start;
-    setBookForm({ start: toLocalInput(start), end: toLocalInput(slot.end) });
+    setBookForm((p) => ({ ...p, start: toLocalInput(start), end: toLocalInput(slot.end) }));
   };
 
   // Генерируем массив дней для недельного календаря.
@@ -376,7 +381,7 @@ export const RoomPage = () => {
       else if (beIn) labels.push(fmt(be));
     }
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    // Доминирующая компания в слоте — самая ранняя из пересекающихся.
+    // Доминирующая компания/пользователь в слоте — самая ранняя из пересекающихся.
     const sorted = [...overlapping].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     const primary = sorted[0];
     return {
@@ -385,6 +390,10 @@ export const RoomPage = () => {
       label: [...new Set(labels)].join(" · "),
       color: primary?.company_color || null,
       companyName: primary?.company_name || null,
+      userName: primary?.user_name || null,
+      comment: primary?.comment || null,
+      // Если в час попало несколько броней — отдадим все, чтобы тултип это показал.
+      bookings: sorted,
     };
   };
 
@@ -433,48 +442,64 @@ export const RoomPage = () => {
           {/* Название комнаты. */}
           <h1 className="room-page__title">{room.name}</h1>
 
-          {/* 4 ближайших свободных слота — кликабельные кнопки. */}
-          <p className="room-top__label">{t.room_next_free}</p>
-          <div className="room-slots">
-            {freeSlots.map((slot, i) => (
-              <button key={i} type="button" className="btn btn--slot" onClick={() => pickSlot(slot)}>
-                <span className="btn--slot__date">
-                  {slot.start.toLocaleDateString("nn-NO", { day: "numeric", month: "short" })}
-                </span>
-                <span className="btn--slot__time">
-                  {slot.start.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
-                  {" - "}
-                  {slot.end.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </button>
-            ))}
-          </div>
+          {/* Слоты и форма бронирования — только для тех, кому можно записывать. */}
+          {canWrite && (
+            <>
+              <p className="room-top__label">{t.room_next_free}</p>
+              <div className="room-slots">
+                {freeSlots.map((slot, i) => (
+                  <button key={i} type="button" className="btn btn--slot" onClick={() => pickSlot(slot)}>
+                    <span className="btn--slot__date">
+                      {slot.start.toLocaleDateString("nn-NO", { day: "numeric", month: "short" })}
+                    </span>
+                    <span className="btn--slot__time">
+                      {slot.start.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                      {" - "}
+                      {slot.end.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-          {/* Форма выбора произвольного времени бронирования. */}
-          <form className="room-book-form" onSubmit={handleBook}>
-            {/* Поле «От» — начало бронирования. */}
-            <label className="form-label">{t.room_from}
-              <input className="form-input" type="datetime-local" value={bookForm.start}
-                onChange={(e) => setBookForm((p) => ({ ...p, start: e.target.value }))} required />
-            </label>
-            <label className="form-label">{t.room_to}
-              <input className="form-input" type="datetime-local" value={bookForm.end}
-                onChange={(e) => setBookForm((p) => ({ ...p, end: e.target.value }))} required />
-            </label>
-            {isAdmin && (room.min_booking_minutes != null || room.max_booking_minutes != null) && (
-              <p className="duration-hint">
-                {room.min_booking_minutes != null && (
-                  <span>{t.room_duration_hint_min}: {room.min_booking_minutes} {t.room_duration_hint_min_unit}</span>
+              <form className="room-book-form" onSubmit={handleBook}>
+                <label className="form-label">{t.room_from}
+                  <input className="form-input" type="datetime-local" value={bookForm.start}
+                    onChange={(e) => setBookForm((p) => ({ ...p, start: e.target.value }))} required />
+                </label>
+                <label className="form-label">{t.room_to}
+                  <input className="form-input" type="datetime-local" value={bookForm.end}
+                    onChange={(e) => setBookForm((p) => ({ ...p, end: e.target.value }))} required />
+                </label>
+                {/* Поле описания бронирования (попадает в tooltip над ячейкой календаря). */}
+                <label className="form-label">{t.room_comment_label}
+                  <textarea
+                    className="form-input form-input--textarea"
+                    rows={2}
+                    maxLength={500}
+                    placeholder={t.room_comment_placeholder_book}
+                    value={bookForm.comment}
+                    onChange={(e) => setBookForm((p) => ({ ...p, comment: e.target.value }))}
+                  />
+                </label>
+                {isAdmin && (room.min_booking_minutes != null || room.max_booking_minutes != null) && (
+                  <p className="duration-hint">
+                    {room.min_booking_minutes != null && (
+                      <span>{t.room_duration_hint_min}: {room.min_booking_minutes} {t.room_duration_hint_min_unit}</span>
+                    )}
+                    {room.min_booking_minutes != null && room.max_booking_minutes != null && <span> · </span>}
+                    {room.max_booking_minutes != null && (
+                      <span>{t.room_duration_hint_max}: {room.max_booking_minutes} {t.room_duration_hint_min_unit}</span>
+                    )}
+                  </p>
                 )}
-                {room.min_booking_minutes != null && room.max_booking_minutes != null && <span> · </span>}
-                {room.max_booking_minutes != null && (
-                  <span>{t.room_duration_hint_max}: {room.max_booking_minutes} {t.room_duration_hint_min_unit}</span>
-                )}
-              </p>
-            )}
-            {error && <p className="error-text">{error}</p>}
-            <button className="btn btn--primary" type="submit">{t.room_book_btn}</button>
-          </form>
+                {error && <p className="error-text">{error}</p>}
+                <button className="btn btn--primary" type="submit">{t.room_book_btn}</button>
+              </form>
+            </>
+          )}
+          {isViewer && (
+            <p className="helper-text">{t.viewer_hint}</p>
+          )}
 
           {/* Информация о комнате: вместимость, оборудование, описание. */}
           <div className="room-info">
@@ -501,8 +526,8 @@ export const RoomPage = () => {
         <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
         <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
       </div>
-      {/* Легенда: компании, чьи бронирования видимы на текущей неделе. */}
-      {(() => {
+      {/* Легенда: компании, чьи бронирования видимы на текущей неделе. Viewer её не видит. */}
+      {!isViewer && (() => {
         const seen = new Map();
         for (const b of bookings) {
           if (b.company_id && !seen.has(b.company_id)) {
@@ -541,18 +566,45 @@ export const RoomPage = () => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d) => {
                 const info = getSlotInfo(d, h);
-                // Окрашиваем ячейку по цвету компании (если бронирование не прошло)
-                // и подбираем контрастный цвет текста, чтобы цифры читались
-                // и на тёмном, и на светлом фоне компании.
-                const cellStyle = info?.booked && !info.past && info.color
+                // Для viewer ячейка одинаково серая — компании скрыты;
+                // для остальных красим в цвет компании (если бронь не прошла).
+                const cellStyle = info?.booked && !info.past && info.color && !isViewer
                   ? { background: info.color, borderColor: info.color, color: getContrastText(info.color) }
                   : undefined;
+                // Для viewer показываем нейтральный «Opptatt» вместо диапазона времени —
+                // подразумевается что точные минуты тоже не нужны при read-only обзоре.
+                const cellLabel = info?.booked
+                  ? (isViewer ? t.cell_busy_short : info.label)
+                  : null;
                 return (
                   <div key={d.toISOString() + h}
                     className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
-                    style={cellStyle}
-                    title={info?.companyName || undefined}>
-                    {info?.label && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{info.label}</span>}
+                    style={cellStyle}>
+                    {cellLabel && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{cellLabel}</span>}
+                    {/* Tooltip только для не-viewer и только на занятых ячейках. */}
+                    {info?.booked && !isViewer && (
+                      <div className="cal-tip" role="tooltip">
+                        {info.bookings.map((b, i) => (
+                          <div key={b.id || i} className="cal-tip__row">
+                            <div className="cal-tip__time">
+                              {fmtClock(new Date(b.start_time))} – {fmtClock(new Date(b.end_time))}
+                            </div>
+                            <div className="cal-tip__user">
+                              <strong>{b.user_name || "—"}</strong>
+                            </div>
+                            {b.company_name && (
+                              <div className="cal-tip__company">
+                                <span className="cal-tip__dot" style={{ background: b.company_color || "#9ca3af" }} />
+                                {b.company_name}
+                              </div>
+                            )}
+                            {b.comment && (
+                              <div className="cal-tip__comment">{b.comment}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -561,7 +613,8 @@ export const RoomPage = () => {
         </div>
       </div>
 
-      {/* ---- Нижняя секция: история бронирований + комментарии ---- */}
+      {/* ---- Нижняя секция: история бронирований + комментарии. Скрыта для viewer. ---- */}
+      {!isViewer && (
       <div className="room-bottom">
         {/* Левая половина: история бронирований. */}
         <div className="room-bottom__history">
@@ -670,6 +723,7 @@ export const RoomPage = () => {
           </div>
         </div>
       </div>
+      )}
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}

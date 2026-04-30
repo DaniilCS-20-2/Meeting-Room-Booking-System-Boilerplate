@@ -133,6 +133,16 @@ export const t = {
   admin_whitelist_empty: "Ingen e-postar i lista.",
   admin_whitelist_role_user: "Brukar",
   admin_whitelist_role_admin: "Admin",
+  admin_whitelist_role_viewer: "Berre lese",
+
+  // ============= Booking-kommentar / tooltip =============
+  room_comment_label: "Skildring",
+  room_comment_placeholder_book: "Kva skal møtet handle om? (valfritt)",
+  tooltip_user: "Brukar",
+  tooltip_company: "Selskap",
+  tooltip_comment: "Skildring",
+  cell_busy_short: "Opptatt",
+  viewer_hint: "Du har berre lesetilgang.",
 
   // ============= Компании (selskap) =============
   auth_company: "Selskap",

@@ -15,7 +15,9 @@ const router = express.Router();
 // GET    /api/comments/room/:roomId — получение комментариев к комнате.
 router.get("/room/:roomId", authMiddleware, commentController.getByRoom);
 // POST   /api/comments/room/:roomId — создание комментария к комнате.
-router.post("/room/:roomId", authMiddleware, validateBody(commentCreateSchema), commentController.create);
+// Viewer (read-only) не может писать — только user и admin.
+router.post("/room/:roomId", authMiddleware, rbacMiddleware(["user", "admin"]),
+  validateBody(commentCreateSchema), commentController.create);
 // DELETE /api/comments/:id — удаление комментария (только админ).
 router.delete("/:id", authMiddleware, rbacMiddleware(["admin"]), commentController.remove);
 

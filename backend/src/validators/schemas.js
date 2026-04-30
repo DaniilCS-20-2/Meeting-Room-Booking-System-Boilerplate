@@ -113,12 +113,12 @@ const adminUpdateUserCompanySchema = z
 const whitelistAddSchema = z
   .object({
     email: emailField,
-    role: z.enum(["user", "admin"]).default("user"),
+    role: z.enum(["user", "admin", "viewer"]).default("user"),
   })
   .strict();
 
 const whitelistUpdateSchema = z
-  .object({ role: z.enum(["user", "admin"]) })
+  .object({ role: z.enum(["user", "admin", "viewer"]) })
   .strict();
 
 const companyCreateSchema = z

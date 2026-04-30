@@ -291,6 +291,7 @@ export const AdminUsersPage = () => {
         >
           <option value="user">{t.admin_whitelist_role_user}</option>
           <option value="admin">{t.admin_whitelist_role_admin}</option>
+          <option value="viewer">{t.admin_whitelist_role_viewer}</option>
         </select>
         <button type="submit" className="btn btn--primary btn--small">{t.admin_whitelist_add}</button>
       </form>
@@ -308,6 +309,7 @@ export const AdminUsersPage = () => {
             >
               <option value="user">{t.admin_whitelist_role_user}</option>
               <option value="admin">{t.admin_whitelist_role_admin}</option>
+              <option value="viewer">{t.admin_whitelist_role_viewer}</option>
             </select>
             <button
               type="button"
