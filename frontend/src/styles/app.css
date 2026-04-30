@@ -764,11 +764,7 @@ body {
   text-align: left;
   white-space: normal;
   min-width: 160px;
-  max-width: 240px;
-  /* Гарантия, что тултип не вырастает на всю высоту экрана при куче броней.
-     Если содержимого больше — появляется внутренний скролл, а не «уезд» за сетку. */
-  max-height: 240px;
-  overflow-y: auto;
+  max-width: 280px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
   z-index: 50;
   pointer-events: none;
