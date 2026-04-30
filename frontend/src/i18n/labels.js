@@ -143,6 +143,8 @@ export const t = {
   tooltip_comment: "Skildring",
   cell_busy_short: "Opptatt",
   viewer_hint: "Du har berre lesetilgang.",
+  anon_hint_login: "Logg inn",
+  anon_hint_to_book: "for å booka rommet.",
 
   // ============= Компании (selskap) =============
   auth_company: "Selskap",

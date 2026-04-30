@@ -18,38 +18,18 @@ export const HomePage = () => {
   const [rooms, setRooms] = useState([]);
   const [confirmAction, setConfirmAction] = useState(null);
 
-  // Загружаем список комнат с сервера, если пользователь авторизован.
+  // Загружаем список комнат — публично, токен опционален.
   useEffect(() => {
-    // Если пользователь не авторизован — не загружаем комнаты.
-    if (!user || !token) return;
-    // Отправляем GET /api/rooms и сохраняем результат в state.
     apiFetch("/rooms", { token }).then(setRooms).catch(() => {});
-  }, [user, token]);
+  }, [token]);
 
-  // ---- Вид для незарегистрированного пользователя ----
-  if (!user) {
-    return (
-      <section className="home-page page">
-        {/* Верхняя полоса с кнопками входа и регистрации. */}
-        <div className="home-topbar">
-          {/* Кнопка «Logg inn» ведёт на страницу логина. */}
-          <Link className="home-btn home-btn--ghost" to="/auth?mode=login">{t.home_login_btn}</Link>
-          {/* Кнопка «Registrer deg» ведёт на страницу регистрации. */}
-          <Link className="home-btn home-btn--primary" to="/auth?mode=register">{t.home_register_btn}</Link>
-        </div>
-        {/* Приветственный заголовок сайта. */}
-        <h1 className="home-page__title">{t.home_welcome}</h1>
-        {/* Краткая информация о сервисе для неавторизованных. */}
-        <p className="home-page__subtitle">{t.home_info}</p>
-      </section>
-    );
-  }
-
-  // ---- Вид для авторизованного пользователя ----
-  // Проверяем, является ли текущий пользователь админом.
-  const isAdmin = user.role === "admin";
+  // Аноним = неавторизованный посетитель. Видит карточки комнат и базовый
+  // статус «занято/свободно», но не имена и не админские действия.
+  const isAnonymous = !user;
+  // Признак админа — для отображения админских кнопок.
+  const isAdmin = !!user && user.role === "admin";
   // Берём первую букву имени для отображения в кружке аватара.
-  const initials = (user.display_name || user.email || "U").charAt(0).toUpperCase();
+  const initials = user ? (user.display_name || user.email || "U").charAt(0).toUpperCase() : "";
 
   const handleDelete = (roomId, roomName) => {
     setConfirmAction({
@@ -71,32 +51,46 @@ export const HomePage = () => {
     <section className="home-page page">
       <div className="home-topbar">
         <div className="home-topbar__right">
-          {isAdmin && (
+          {isAnonymous ? (
             <>
-              <Link className="home-btn home-btn--primary home-btn--icon-only" to="/admin/rooms/new" title={t.room_add} aria-label={t.room_add}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{marginRight: 4, verticalAlign: "middle"}}>
-                  <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <span className="home-btn__label">{t.room_add}</span>
-              </Link>
-              <Link className="home-btn home-btn--ghost home-btn--icon-only" to="/admin/users" title={t.room_manage_users} aria-label={t.room_manage_users}>
-                <svg width="18" height="16" viewBox="0 0 24 20" fill="currentColor" style={{marginRight: 4, verticalAlign: "middle"}}>
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                </svg>
-                <span className="home-btn__label">{t.room_manage_users}</span>
-              </Link>
+              <Link className="home-btn home-btn--ghost" to="/auth?mode=login">{t.home_login_btn}</Link>
+              <Link className="home-btn home-btn--primary" to="/auth?mode=register">{t.home_register_btn}</Link>
+            </>
+          ) : (
+            <>
+              {isAdmin && (
+                <>
+                  <Link className="home-btn home-btn--primary home-btn--icon-only" to="/admin/rooms/new" title={t.room_add} aria-label={t.room_add}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{marginRight: 4, verticalAlign: "middle"}}>
+                      <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <span className="home-btn__label">{t.room_add}</span>
+                  </Link>
+                  <Link className="home-btn home-btn--ghost home-btn--icon-only" to="/admin/users" title={t.room_manage_users} aria-label={t.room_manage_users}>
+                    <svg width="18" height="16" viewBox="0 0 24 20" fill="currentColor" style={{marginRight: 4, verticalAlign: "middle"}}>
+                      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <span className="home-btn__label">{t.room_manage_users}</span>
+                  </Link>
+                </>
+              )}
+              <button type="button" className="avatar-btn" onClick={() => navigate("/profile")}>
+                {user.avatar_url
+                  ? <img src={resolveUploadUrl(user.avatar_url)} alt="" className="avatar-btn__img" />
+                  : <span className="avatar-btn__initials">{initials}</span>}
+              </button>
             </>
           )}
-          <button type="button" className="avatar-btn" onClick={() => navigate("/profile")}>
-            {user.avatar_url
-              ? <img src={resolveUploadUrl(user.avatar_url)} alt="" className="avatar-btn__img" />
-              : <span className="avatar-btn__initials">{initials}</span>}
-          </button>
         </div>
       </div>
 
-      {/* Основной заголовок страницы. */}
-      <h1 className="home-page__title">{t.home_title}</h1>
+      {/* Заголовок: для анонима — приветствие, для залогиненных — секция комнат. */}
+      <h1 className="home-page__title">
+        {isAnonymous ? t.home_welcome : t.home_title}
+      </h1>
+      {isAnonymous && (
+        <p className="home-page__subtitle">{t.home_info}</p>
+      )}
 
       {/* Сетка карточек комнат. */}
       <div className="home-grid">

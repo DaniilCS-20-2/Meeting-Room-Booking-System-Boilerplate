@@ -105,8 +105,8 @@ const AppLayout = () => {
         <Route path="/" element={<HomePage />} />
         {/* Страница авторизации (логин/регистрация) — доступна всем. */}
         <Route path="/auth" element={<AuthPage />} />
-        {/* Страница комнаты — только для авторизованных пользователей. */}
-        <Route path="/rooms/:roomId" element={<ProtectedRoute><RoomPage /></ProtectedRoute>} />
+        {/* Страница комнаты — публично (анонимы видят read-only календарь). */}
+        <Route path="/rooms/:roomId" element={<RoomPage />} />
         {/* Страница профиля — только для авторизованных пользователей. */}
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         {/* Создание новой комнаты — только для админов. */}

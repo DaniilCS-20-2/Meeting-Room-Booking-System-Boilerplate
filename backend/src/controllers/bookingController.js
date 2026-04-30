@@ -25,16 +25,30 @@ const createBooking = async (req, res, next) => {
 };
 
 // Контроллер получения бронирований по комнате (для календаря).
+// Доступен анонимам и viewer'ам, но из ответа вырезаются персональные поля
+// (имя, селскап, цвет, описание) — наружу торчит только факт занятости.
 const getByRoom = async (req, res, next) => {
   try {
     // Извлекаем параметры фильтрации из query string.
     const { from, to } = req.query;
-    // Получаем бронирования комнаты за указанный период.
     const bookings = await BookingRepository.findByRoom(req.params.roomId, { from, to });
-    // Возвращаем 200 с массивом бронирований.
+
+    const role = req.user?.role;
+    const isPrivileged = role === "user" || role === "admin";
+    if (!isPrivileged) {
+      // Анонимы и viewer видят только время и статус — никаких имён.
+      const scrubbed = bookings.map((b) => ({
+        id: b.id,
+        room_id: b.room_id,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        status: b.status,
+      }));
+      return res.json({ success: true, data: scrubbed });
+    }
+
     res.json({ success: true, data: bookings });
   } catch (err) {
-    // Передаём ошибку в глобальный обработчик.
     next(err);
   }
 };

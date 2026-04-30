@@ -1,6 +1,7 @@
 const express = require("express");
 const roomController = require("../controllers/roomController");
 const authMiddleware = require("../middlewares/authMiddleware");
+const optionalAuthMiddleware = require("../middlewares/optionalAuthMiddleware");
 const rbacMiddleware = require("../middlewares/rbacMiddleware");
 const { validateBody } = require("../middlewares/validateMiddleware");
 const { roomCreateSchema } = require("../validators/schemas");
@@ -9,10 +10,11 @@ const { processImage } = require("../middlewares/imageUploadMiddleware");
 // Создаём экземпляр роутера для маршрутов комнат.
 const router = express.Router();
 
-// GET    /api/rooms — список всех комнат (требует авторизацию).
-router.get("/", authMiddleware, roomController.getAll);
-// GET    /api/rooms/:id — детали одной комнаты (требует авторизацию).
-router.get("/:id", authMiddleware, roomController.getById);
+// GET    /api/rooms — список комнат. Публично (анонимы видят сам список,
+// но без админских флагов и без бронирования).
+router.get("/", optionalAuthMiddleware, roomController.getAll);
+// GET    /api/rooms/:id — детали одной комнаты. Тоже публично.
+router.get("/:id", optionalAuthMiddleware, roomController.getById);
 // POST   /api/rooms — создание комнаты (только админ).
 router.post("/", authMiddleware, rbacMiddleware(["admin"]), validateBody(roomCreateSchema), roomController.create);
 // PUT    /api/rooms/:id — обновление комнаты (только админ).

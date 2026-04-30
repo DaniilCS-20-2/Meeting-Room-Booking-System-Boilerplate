@@ -129,44 +129,38 @@ export const RoomPage = () => {
   });
 
   const isAdmin = user?.role === "admin";
+  // Аноним = неавторизованный посетитель; читает тот же скрабленный календарь.
+  const isAnonymous = !user;
   // Viewer (read-only): видит только календарь занятости без имён/селскапов.
   const isViewer = user?.role === "viewer";
-  // Все, кому разрешено бронировать/комментировать (т.е. НЕ viewer).
-  const canWrite = !isViewer;
+  // Тот, кому разрешено бронировать/комментировать: НЕ аноним и НЕ viewer.
+  const canWrite = !isAnonymous && !isViewer;
   const [historySort, setHistorySort] = useState("time");
   const [confirmAction, setConfirmAction] = useState(null);
 
-  // Загружаем данные комнаты с сервера при монтировании или смене roomId.
+  // Загружаем данные комнаты — публичный эндпоинт, токен опционален.
   useEffect(() => {
-    // Если нет токена — не загружаем (пользователь не авторизован).
-    if (!token) return;
-    // GET /api/rooms/:roomId — получаем детали комнаты.
     apiFetch(`/rooms/${roomId}`, { token }).then(setRoom).catch(() => {});
   }, [roomId, token]);
 
-  // Функция загрузки бронирований и истории для текущей комнаты.
+  // Загружаем бронирования (публично) и историю (только для авторизованных).
   const loadBookings = () => {
-    // Если нет токена — не загружаем.
-    if (!token) return;
-    // Формируем границы недели для запроса.
     const from = weekStart.toISOString();
     const to = new Date(weekStart.getTime() + 7 * 86400000).toISOString();
-    // GET /api/bookings/room/:id?from=...&to=... — бронирования за неделю.
     apiFetch(`/bookings/room/${roomId}?from=${from}&to=${to}`, { token }).then(setBookings).catch(() => {});
-    // GET /api/bookings/room/:id/history — полная история.
-    apiFetch(`/bookings/room/${roomId}/history`, { token }).then(setHistory).catch(() => {});
+    if (token) {
+      apiFetch(`/bookings/room/${roomId}/history`, { token }).then(setHistory).catch(() => {});
+    } else {
+      setHistory([]);
+    }
   };
-  // Перезагружаем при смене комнаты, токена или недели.
   useEffect(loadBookings, [roomId, token, weekStart]);
 
-  // Функция загрузки комментариев к комнате.
+  // Комментарии к комнате — только для авторизованных.
   const loadComments = () => {
-    // Если нет токена — не загружаем.
     if (!token) return;
-    // GET /api/comments/room/:roomId — комментарии к комнате.
     apiFetch(`/comments/room/${roomId}`, { token }).then(setComments).catch(() => {});
   };
-  // Загружаем комментарии при монтировании.
   useEffect(loadComments, [roomId, token]);
 
   const freeSlots = useMemo(() => {
@@ -500,6 +494,11 @@ export const RoomPage = () => {
           {isViewer && (
             <p className="helper-text">{t.viewer_hint}</p>
           )}
+          {isAnonymous && (
+            <p className="helper-text">
+              <Link to="/auth?mode=login">{t.anon_hint_login}</Link> {t.anon_hint_to_book}
+            </p>
+          )}
 
           {/* Информация о комнате: вместимость, оборудование, описание. */}
           <div className="room-info">
@@ -526,8 +525,8 @@ export const RoomPage = () => {
         <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
         <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
       </div>
-      {/* Легенда: компании, чьи бронирования видимы на текущей неделе. Viewer её не видит. */}
-      {!isViewer && (() => {
+      {/* Легенда компаний — только для тех, кто видит сами компании. */}
+      {canWrite && (() => {
         const seen = new Map();
         for (const b of bookings) {
           if (b.company_id && !seen.has(b.company_id)) {
@@ -566,23 +565,21 @@ export const RoomPage = () => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d) => {
                 const info = getSlotInfo(d, h);
-                // Для viewer ячейка одинаково серая — компании скрыты;
-                // для остальных красим в цвет компании (если бронь не прошла).
-                const cellStyle = info?.booked && !info.past && info.color && !isViewer
+                // В read-only режиме (viewer/аноним) ячейка нейтрально-серая,
+                // никаких цветов компаний и точных минут наружу.
+                const cellStyle = info?.booked && !info.past && info.color && canWrite
                   ? { background: info.color, borderColor: info.color, color: getContrastText(info.color) }
                   : undefined;
-                // Для viewer показываем нейтральный «Opptatt» вместо диапазона времени —
-                // подразумевается что точные минуты тоже не нужны при read-only обзоре.
                 const cellLabel = info?.booked
-                  ? (isViewer ? t.cell_busy_short : info.label)
+                  ? (canWrite ? info.label : t.cell_busy_short)
                   : null;
                 return (
                   <div key={d.toISOString() + h}
                     className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
                     style={cellStyle}>
                     {cellLabel && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{cellLabel}</span>}
-                    {/* Tooltip только для не-viewer и только на занятых ячейках. */}
-                    {info?.booked && !isViewer && (
+                    {/* Tooltip только для авторизованных писателей (user/admin). */}
+                    {info?.booked && canWrite && (
                       <div className="cal-tip" role="tooltip">
                         {info.bookings.map((b, i) => (
                           <div key={b.id || i} className="cal-tip__row">
@@ -613,8 +610,8 @@ export const RoomPage = () => {
         </div>
       </div>
 
-      {/* ---- Нижняя секция: история бронирований + комментарии. Скрыта для viewer. ---- */}
-      {!isViewer && (
+      {/* История + комментарии — только для авторизованных писателей. */}
+      {canWrite && (
       <div className="room-bottom">
         {/* Левая половина: история бронирований. */}
         <div className="room-bottom__history">
