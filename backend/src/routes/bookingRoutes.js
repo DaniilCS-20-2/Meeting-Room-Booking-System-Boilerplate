@@ -18,6 +18,8 @@ const writers = rbacMiddleware(["user", "admin"]);
 
 // POST   /api/bookings — создание бронирования (одиночного или recurring).
 router.post("/", authMiddleware, writers, validateBody(createBookingSchema), bookingController.createBooking);
+// GET    /api/bookings — общий календарь по всем комнатам (публично, скрабленные поля для anon/viewer).
+router.get("/", optionalAuthMiddleware, bookingController.getAllInRange);
 // GET    /api/bookings/my — бронирования текущего пользователя.
 router.get("/my", authMiddleware, bookingController.getMy);
 // GET    /api/bookings/room/:roomId — публично (анонимы видят занятость без имён).

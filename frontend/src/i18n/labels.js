@@ -19,6 +19,7 @@ export const t = {
 
   // ============= Главная страница (авторизованный) =============
   home_title: "Moterom",                     // Заголовок секции комнат.
+  home_overview_calendar: "Felles kalender", // Заголовок общего календаря на главной.
   room_free: "Ledig",                        // Статус: комната свободна.
   room_busy: "Opptatt",                      // Статус: комната занята.
   room_disabled: "Vedlikehald",              // Статус: комната на обслуживании.

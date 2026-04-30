@@ -105,6 +105,30 @@ class BookingRepository {
     return rows;
   }
 
+  // Получаем активные бронирования всех комнат за период (для общего календаря).
+  // Тот же набор полей, что и findByRoom, плюс name комнаты для подписи/цвета.
+  static async findAllInRange({ from, to } = {}) {
+    let query = `
+      SELECT b.id, b.room_id, r.name AS room_name, b.user_id,
+             COALESCE(u.display_name, b.user_name_snapshot) AS user_name,
+             u.avatar_url AS user_avatar,
+             u.company_id,
+             COALESCE(c.name,  b.company_name_snapshot)     AS company_name,
+             COALESCE(c.color, b.company_color_snapshot)    AS company_color,
+             b.start_time, b.end_time, b.status, b.recurrence_group_id, b.comment, b.created_at
+      FROM bookings b
+      JOIN rooms r ON r.id = b.room_id
+      LEFT JOIN users u ON u.id = b.user_id
+      LEFT JOIN companies c ON c.id = u.company_id
+      WHERE b.status IN ('pending', 'confirmed')`;
+    const params = [];
+    if (from) { params.push(from); query += ` AND b.end_time >= $${params.length}`; }
+    if (to)   { params.push(to);   query += ` AND b.start_time <= $${params.length}`; }
+    query += " ORDER BY b.start_time ASC";
+    const { rows } = await pool.query(query, params);
+    return rows;
+  }
+
   // Получаем полную историю бронирований комнаты (включая отменённые).
   static async findHistoryByRoom(roomId) {
     // LEFT JOIN + COALESCE: история сохраняется даже если пользователь/компания

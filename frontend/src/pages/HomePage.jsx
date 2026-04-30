@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { OverviewCalendar } from "../components/OverviewCalendar";
 
 // Главная страница приложения.
 export const HomePage = () => {
@@ -91,6 +92,13 @@ export const HomePage = () => {
       {isAnonymous && (
         <p className="home-page__subtitle">{t.home_info}</p>
       )}
+
+      {/* Общий календарь по всем комнатам. Аноним/viewer видят только занятость
+          и название комнаты; user/admin — ещё и человека, селскап и описание. */}
+      <OverviewCalendar
+        token={token}
+        canSeeDetails={!!user && user.role !== "viewer"}
+      />
 
       {/* Сетка карточек комнат. */}
       <div className="home-grid">

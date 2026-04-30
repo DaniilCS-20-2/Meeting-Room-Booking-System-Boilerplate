@@ -53,6 +53,31 @@ const getByRoom = async (req, res, next) => {
   }
 };
 
+// GET /api/bookings — бронирования всех комнат в диапазоне (для общего календаря).
+// Публично (через optionalAuth), но persona-поля скрываются для anon/viewer.
+const getAllInRange = async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    const bookings = await BookingRepository.findAllInRange({ from, to });
+    const role = req.user?.role;
+    const isPrivileged = role === "user" || role === "admin";
+    if (!isPrivileged) {
+      const scrubbed = bookings.map((b) => ({
+        id: b.id,
+        room_id: b.room_id,
+        room_name: b.room_name,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        status: b.status,
+      }));
+      return res.json({ success: true, data: scrubbed });
+    }
+    res.json({ success: true, data: bookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Контроллер получения полной истории бронирований комнаты (все статусы).
 const getHistoryByRoom = async (req, res, next) => {
   try {
@@ -151,4 +176,5 @@ module.exports = {
   cancel,
   updateBooking,
   cancelSeries,
+  getAllInRange,
 };

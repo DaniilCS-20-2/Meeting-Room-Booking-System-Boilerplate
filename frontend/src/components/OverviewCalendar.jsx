@@ -1,0 +1,206 @@
+// Большой общий календарь на главной — недельный обзор по всем комнатам.
+// Цвет ячейки = цвет комнаты (детерминированно от id), при ховере — список
+// бронирований на этом часу с указанием комнаты, пользователя и компании.
+// Для анонима/viewer персональные поля не приходят с сервера, поэтому
+// в read-only режиме мы рисуем нейтрально-серые ячейки с текстом «Opptatt».
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../api";
+import { t } from "../i18n/labels";
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// Стартовая дата текущей недели (понедельник, 00:00).
+const startOfWeek = (date = new Date()) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  // getDay(): 0=Sunday ... 6=Saturday. В нн-NO неделя начинается с понедельника.
+  const dow = d.getDay();
+  const diff = (dow === 0 ? -6 : 1 - dow);
+  d.setDate(d.getDate() + diff);
+  return d;
+};
+
+const buildWeekGrid = (start) => {
+  const days = [];
+  const d = new Date(start);
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(d);
+    day.setDate(d.getDate() + i);
+    days.push(day);
+  }
+  return days;
+};
+
+// Палитра, из которой берём цвет комнаты по детерминированному хешу.
+// Ровно 10 «дружелюбных» оттенков, разнесённых по тону, чтобы соседние
+// комнаты редко получали похожий цвет.
+const ROOM_PALETTE = [
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
+  "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#f59e0b",
+];
+
+const colorForRoom = (key) => {
+  const s = String(key || "x");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return ROOM_PALETTE[h % ROOM_PALETTE.length];
+};
+
+// Контрастный текст для произвольного HEX (Rec. 601).
+const getContrastText = (hex) => {
+  if (typeof hex !== "string") return "#fff";
+  const v = hex.trim().replace("#", "");
+  const full = v.length === 3 ? v.split("").map((c) => c + c).join("") : v;
+  if (full.length !== 6) return "#fff";
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return "#fff";
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luma > 160 ? "#111827" : "#fff";
+};
+
+const fmtClock = (d) => d.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" });
+
+export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
+  const navigate = useNavigate();
+  const [weekStart, setWeekStart] = useState(() => startOfWeek());
+  const [bookings, setBookings] = useState([]);
+
+  useEffect(() => {
+    const from = weekStart.toISOString();
+    const to = new Date(weekStart.getTime() + 7 * 86400000).toISOString();
+    apiFetch(`/bookings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { token })
+      .then(setBookings)
+      .catch(() => setBookings([]));
+  }, [weekStart, token]);
+
+  const weekDays = useMemo(() => buildWeekGrid(weekStart), [weekStart]);
+
+  // Уникальный список комнат (для легенды). Берём имя из первой попавшейся брони.
+  const roomLegend = useMemo(() => {
+    const map = new Map();
+    for (const b of bookings) {
+      if (b.room_id && !map.has(b.room_id)) {
+        map.set(b.room_id, { id: b.room_id, name: b.room_name, color: colorForRoom(b.room_id) });
+      }
+    }
+    return [...map.values()];
+  }, [bookings]);
+
+  // Определяем содержимое часа `hour` дня `day`:
+  // занят ли он, какие брони пересекаются и какая «доминирующая».
+  const slotInfo = (day, hour) => {
+    const slotStart = new Date(day);
+    slotStart.setHours(hour, 0, 0, 0);
+    const slotEnd = new Date(slotStart.getTime() + 3600000);
+    const overlapping = bookings.filter((b) => {
+      const bs = new Date(b.start_time).getTime();
+      const be = new Date(b.end_time).getTime();
+      return slotStart.getTime() < be && slotEnd.getTime() > bs;
+    });
+    if (!overlapping.length) return null;
+    const sorted = [...overlapping].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const primary = sorted[0];
+    const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
+    return { primary, bookings: sorted, past: allPast };
+  };
+
+  const prevWeek = () => setWeekStart(new Date(weekStart.getTime() - 7 * 86400000));
+  const nextWeek = () => setWeekStart(new Date(weekStart.getTime() + 7 * 86400000));
+
+  return (
+    <section className="overview-cal">
+      <div className="overview-cal__head">
+        <h2 className="section-title overview-cal__title">{t.home_overview_calendar}</h2>
+        <div className="calendar-nav">
+          <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
+          <span>
+            {weekStart.toLocaleDateString("nn-NO")} &ndash;{" "}
+            {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}
+          </span>
+          <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+        </div>
+      </div>
+
+      {roomLegend.length > 0 && (
+        <div className="calendar-legend">
+          {roomLegend.map((r) => (
+            <span key={r.id} className="calendar-legend__item">
+              <span className="calendar-legend__dot" style={{ background: r.color }} />
+              {r.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="calendar-grid calendar-grid--overview">
+        <div className="calendar-grid__header">
+          <div className="calendar-grid__corner"></div>
+          {weekDays.map((d) => (
+            <div key={d.toISOString()} className="calendar-grid__day-label">
+              {d.toLocaleDateString("nn-NO", { weekday: "short", day: "numeric" })}
+            </div>
+          ))}
+        </div>
+        <div className="calendar-grid__body">
+          {HOURS.map((h) => (
+            <div key={h} className="calendar-grid__row">
+              <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
+              {weekDays.map((d) => {
+                const info = slotInfo(d, h);
+                const cellColor = info && !info.past ? colorForRoom(info.primary.room_id) : null;
+                const cellStyle = cellColor
+                  ? { background: cellColor, borderColor: cellColor, color: getContrastText(cellColor) }
+                  : undefined;
+                const onClick = info
+                  ? () => navigate(`/rooms/${info.primary.room_id}`)
+                  : null;
+                return (
+                  <div
+                    key={d.toISOString() + h}
+                    className={`calendar-grid__cell ${info ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${onClick ? " calendar-grid__cell--clickable" : ""}`}
+                    style={cellStyle}
+                    onClick={onClick}
+                    role={onClick ? "button" : undefined}
+                    tabIndex={onClick ? 0 : undefined}
+                    onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+                  >
+                    {info && (
+                      <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>
+                        {info.primary.room_name}
+                      </span>
+                    )}
+                    {info && canSeeDetails && (
+                      <div className="cal-tip" role="tooltip">
+                        {info.bookings.map((b, i) => (
+                          <div key={b.id || i} className="cal-tip__row">
+                            <div className="cal-tip__time">
+                              {fmtClock(new Date(b.start_time))} – {fmtClock(new Date(b.end_time))}
+                            </div>
+                            <div className="cal-tip__user"><strong>{b.room_name}</strong></div>
+                            {b.user_name && <div className="cal-tip__user">{b.user_name}</div>}
+                            {b.company_name && (
+                              <div className="cal-tip__company">
+                                <span className="cal-tip__dot" style={{ background: b.company_color || "#9ca3af" }} />
+                                {b.company_name}
+                              </div>
+                            )}
+                            {b.comment && <div className="cal-tip__comment">{b.comment}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};

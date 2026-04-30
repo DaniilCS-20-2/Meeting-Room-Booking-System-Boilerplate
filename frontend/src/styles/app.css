@@ -800,6 +800,14 @@ body {
   outline-offset: -2px;
 }
 
+/* --- Общий обзорный календарь на главной --- */
+.overview-cal { margin: 16px 0 32px; }
+.overview-cal__head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+.overview-cal__title { margin: 0; }
+
 /* --- Модалка бронирования --- */
 .modal-overlay {
   position: fixed; inset: 0;
