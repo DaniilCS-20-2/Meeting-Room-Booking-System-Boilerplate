@@ -203,7 +203,7 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
                               className={`overview-cal__chunk ${info.past ? "overview-cal__chunk--past" : ""}`}
                               style={chunkStyle}
                               onClick={(e) => { e.stopPropagation(); navigate(`/rooms/${r.roomId}`); }}
-                              title={r.roomName}
+                              aria-label={r.roomName}
                             >
                               <span className="overview-cal__chunk-label">{r.roomName}</span>
                             </button>
