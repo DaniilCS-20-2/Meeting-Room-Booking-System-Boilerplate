@@ -85,11 +85,13 @@ export const BookingModal = ({
   };
 
   // Универсальный «спросить, потом выполнить»: один поток для create/edit/cancel.
-  const askThenRun = ({ title, text, run }) => {
+  // variant управляет цветом кнопки подтверждения: "success" для сохранения, "danger" для отмены/удаления.
+  const askThenRun = ({ title, text, run, variant = "success" }) => {
     setError("");
     setConfirm({
       title,
       text,
+      variant,
       action: async () => {
         try {
           setBusy(true);
@@ -162,6 +164,7 @@ export const BookingModal = ({
       title: t.modal_confirm_cancel_title,
       text: t.modal_confirm_cancel_text,
       run: () => apiFetch(`/bookings/${booking.id}/cancel`, { method: "PATCH", token }),
+      variant: "danger",
     });
   };
 
@@ -170,6 +173,7 @@ export const BookingModal = ({
       title: t.modal_confirm_cancel_series_title,
       text: t.modal_confirm_cancel_series_text,
       run: () => apiFetch(`/bookings/${booking.id}/series`, { method: "DELETE", token }),
+      variant: "danger",
     });
   };
 
@@ -300,6 +304,7 @@ export const BookingModal = ({
         <ConfirmDialog
           title={confirm.title}
           text={confirm.text}
+          variant={confirm.variant}
           onConfirm={confirm.action}
           onCancel={() => setConfirm(null)}
         />

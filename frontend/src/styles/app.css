@@ -112,6 +112,8 @@ body {
 .btn--primary:hover { background: #1f2428; }
 .btn--danger { background: #ef4444; color: #fff; border-color: #ef4444; }
 .btn--danger:hover { background: #dc2626; }
+.btn--success { background: #16a34a; color: #fff; border-color: #16a34a; }
+.btn--success:hover { background: #15803d; border-color: #15803d; }
 .btn--dark { background: #111827; color: #fff; border-color: #111827; }
 .btn--dark:hover { background: #000; border-color: #000; }
 .btn--neutral { background: #6b7280; color: #fff; border-color: #6b7280; }
@@ -810,6 +812,42 @@ body {
   flex-wrap: wrap; gap: 8px;
 }
 .overview-cal__title { margin: 0; }
+/* Ячейка-контейнер для чанков. Сама ячейка прозрачна — фон/цвета задаём чанкам.
+   Это позволяет умещать несколько комнат в одном часовом слоте бок о бок. */
+.overview-cal__cell {
+  background: transparent !important;
+  padding: 0;
+}
+.overview-cal__cell.calendar-grid__cell--past { background: #f3f4f6 !important; }
+.overview-cal__chunks {
+  position: absolute; inset: 1px;
+  display: flex; gap: 1px;
+  z-index: 1;
+}
+.overview-cal__chunk {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: filter 0.12s;
+}
+.overview-cal__chunk:hover { filter: brightness(1.08); outline: 2px solid #4f46e5; outline-offset: -2px; }
+.overview-cal__chunk--past {
+  background: #d1d5db; color: #6b7280;
+  cursor: default;
+}
+.overview-cal__chunk--past:hover { filter: none; outline: none; }
+.overview-cal__chunk-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 
 /* --- Модалка бронирования --- */
 .modal-overlay {

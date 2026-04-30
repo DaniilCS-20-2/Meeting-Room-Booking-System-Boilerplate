@@ -1,6 +1,8 @@
 import React from "react";
 
-export const ConfirmDialog = ({ title, text, onConfirm, onCancel }) => {
+// variant: "danger" (по умолчанию — для удалений/отмен) или "success" — для подтверждения создания/сохранения.
+export const ConfirmDialog = ({ title, text, onConfirm, onCancel, variant = "danger" }) => {
+  const confirmClass = variant === "success" ? "btn btn--success" : "btn btn--danger";
   return (
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
@@ -8,7 +10,7 @@ export const ConfirmDialog = ({ title, text, onConfirm, onCancel }) => {
         <p className="confirm-dialog__text">{text}</p>
         <div className="confirm-dialog__actions">
           <button className="btn" type="button" onClick={onCancel}>Avbryt</button>
-          <button className="btn btn--danger" type="button" onClick={onConfirm}>Stadfest</button>
+          <button className={confirmClass} type="button" onClick={onConfirm}>Stadfest</button>
         </div>
       </div>
     </div>

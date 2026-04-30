@@ -91,8 +91,8 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
     return [...map.values()];
   }, [bookings]);
 
-  // Определяем содержимое часа `hour` дня `day`:
-  // занят ли он, какие брони пересекаются и какая «доминирующая».
+  // Группируем пересекающиеся брони по комнатам, чтобы в одном часовом слоте
+  // отображать ВСЕ занятые комнаты рядом (а не только самую раннюю).
   const slotInfo = (day, hour) => {
     const slotStart = new Date(day);
     slotStart.setHours(hour, 0, 0, 0);
@@ -103,10 +103,19 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
       return slotStart.getTime() < be && slotEnd.getTime() > bs;
     });
     if (!overlapping.length) return null;
-    const sorted = [...overlapping].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-    const primary = sorted[0];
+
+    // По одному «чанку» на комнату; внутри чанка — все её брони этого часа.
+    const byRoom = new Map();
+    for (const b of overlapping) {
+      const key = b.room_id;
+      if (!byRoom.has(key)) {
+        byRoom.set(key, { roomId: b.room_id, roomName: b.room_name, bookings: [] });
+      }
+      byRoom.get(key).bookings.push(b);
+    }
+    const rooms = [...byRoom.values()].sort((a, b) => a.roomName.localeCompare(b.roomName));
     const allPast = overlapping.every((b) => new Date(b.end_time) <= new Date());
-    return { primary, bookings: sorted, past: allPast };
+    return { rooms, allBookings: overlapping, past: allPast };
   };
 
   const prevWeek = () => setWeekStart(new Date(weekStart.getTime() - 7 * 86400000));
@@ -152,31 +161,36 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d) => {
                 const info = slotInfo(d, h);
-                const cellColor = info && !info.past ? colorForRoom(info.primary.room_id) : null;
-                const cellStyle = cellColor
-                  ? { background: cellColor, borderColor: cellColor, color: getContrastText(cellColor) }
-                  : undefined;
-                const onClick = info
-                  ? () => navigate(`/rooms/${info.primary.room_id}`)
-                  : null;
                 return (
                   <div
                     key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${info ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${onClick ? " calendar-grid__cell--clickable" : ""}`}
-                    style={cellStyle}
-                    onClick={onClick}
-                    role={onClick ? "button" : undefined}
-                    tabIndex={onClick ? 0 : undefined}
-                    onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+                    className={`calendar-grid__cell overview-cal__cell ${info ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
                   >
                     {info && (
-                      <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>
-                        {info.primary.room_name}
-                      </span>
+                      <div className="overview-cal__chunks">
+                        {info.rooms.map((r) => {
+                          const color = colorForRoom(r.roomId);
+                          const chunkStyle = info.past
+                            ? undefined
+                            : { background: color, color: getContrastText(color) };
+                          return (
+                            <button
+                              key={r.roomId}
+                              type="button"
+                              className={`overview-cal__chunk ${info.past ? "overview-cal__chunk--past" : ""}`}
+                              style={chunkStyle}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/rooms/${r.roomId}`); }}
+                              title={r.roomName}
+                            >
+                              <span className="overview-cal__chunk-label">{r.roomName}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                     {info && canSeeDetails && (
                       <div className="cal-tip" role="tooltip">
-                        {info.bookings.map((b, i) => (
+                        {info.allBookings.map((b, i) => (
                           <div key={b.id || i} className="cal-tip__row">
                             <div className="cal-tip__time">
                               {fmtClock(new Date(b.start_time))} – {fmtClock(new Date(b.end_time))}
