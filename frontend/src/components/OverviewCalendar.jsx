@@ -80,12 +80,16 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
 
   const weekDays = useMemo(() => buildWeekGrid(weekStart), [weekStart]);
 
-  // Уникальный список комнат (для легенды). Берём имя из первой попавшейся брони.
+  // Уникальный список комнат (для легенды). Цвет = админский room_color, fallback — хэш.
   const roomLegend = useMemo(() => {
     const map = new Map();
     for (const b of bookings) {
       if (b.room_id && !map.has(b.room_id)) {
-        map.set(b.room_id, { id: b.room_id, name: b.room_name, color: colorForRoom(b.room_id) });
+        map.set(b.room_id, {
+          id: b.room_id,
+          name: b.room_name,
+          color: b.room_color || colorForRoom(b.room_id),
+        });
       }
     }
     return [...map.values()];
@@ -105,11 +109,17 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
     if (!overlapping.length) return null;
 
     // По одному «чанку» на комнату; внутри чанка — все её брони этого часа.
+    // Цвет берём из `room_color` (если админ задал его), иначе хэш-фолбэк.
     const byRoom = new Map();
     for (const b of overlapping) {
       const key = b.room_id;
       if (!byRoom.has(key)) {
-        byRoom.set(key, { roomId: b.room_id, roomName: b.room_name, bookings: [] });
+        byRoom.set(key, {
+          roomId: b.room_id,
+          roomName: b.room_name,
+          color: b.room_color || colorForRoom(b.room_id),
+          bookings: [],
+        });
       }
       byRoom.get(key).bookings.push(b);
     }
@@ -179,7 +189,7 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
                     {info && (
                       <div className="overview-cal__chunks">
                         {info.rooms.map((r) => {
-                          const color = colorForRoom(r.roomId);
+                          const color = r.color;
                           const chunkStyle = info.past
                             ? undefined
                             : { background: color, color: getContrastText(color) };

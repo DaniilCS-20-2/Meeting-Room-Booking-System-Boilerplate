@@ -834,6 +834,12 @@ body {
 }
 .calendar-grid__body { user-select: none; }
 
+/* Ряд выбора цвета в форме редактирования комнаты. */
+.admin-room-color-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px;
+}
+
 /* --- Общий обзорный календарь на главной --- */
 .overview-cal { margin: 16px 0 32px; }
 .overview-cal__head {

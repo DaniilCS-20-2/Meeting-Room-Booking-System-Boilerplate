@@ -22,6 +22,9 @@ export const AdminRoomPage = () => {
     equipment: "",
     minBookingMinutes: 15,
     maxBookingMinutes: 480,
+    // Цвет комнаты для общего календаря на главной. Если не задан (null/"")
+    // — фронт использует детерминированный hash-фолбэк по id.
+    color: "",
   });
   const [photos, setPhotos] = useState([]);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -43,6 +46,7 @@ export const AdminRoomPage = () => {
         equipment: room.equipment || "",
         minBookingMinutes: room.min_booking_minutes ?? 15,
         maxBookingMinutes: room.max_booking_minutes ?? 480,
+        color: room.color || "",
       });
       setPhotos(room.photos || []);
       setNoMinLimit(room.min_booking_minutes == null);
@@ -106,6 +110,9 @@ export const AdminRoomPage = () => {
       ...form,
       minBookingMinutes: noMinLimit ? null : form.minBookingMinutes,
       maxBookingMinutes: noMaxLimit ? null : form.maxBookingMinutes,
+      // Пустая строка → null, чтобы бэкенд снял пользовательский цвет и фронт
+      // снова стал использовать hash-фолбэк.
+      color: form.color || null,
     };
     try {
       if (isEdit) {
@@ -209,6 +216,33 @@ export const AdminRoomPage = () => {
           </label>
           <label className="form-label">{t.admin_room_equipment}
             <input className="form-input" name="equipment" value={form.equipment} onChange={handleChange} />
+          </label>
+          <label className="form-label">{t.admin_room_color}
+            <div className="admin-room-color-row">
+              <label
+                className="color-chip"
+                style={{ background: form.color || "#94a3b8", color: "#fff" }}
+                title={t.admin_room_color_pick}
+              >
+                <span className="color-chip__label">{t.admin_room_color_pick}</span>
+                <input
+                  type="color"
+                  className="color-chip__input"
+                  value={form.color || "#4f46e5"}
+                  onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
+                />
+              </label>
+              {form.color && (
+                <button
+                  type="button"
+                  className="btn btn--tiny"
+                  onClick={() => setForm((p) => ({ ...p, color: "" }))}
+                  title={t.admin_room_color_reset}
+                >
+                  {t.admin_room_color_reset}
+                </button>
+              )}
+            </div>
           </label>
           <div className="admin-room-times">
             <label className="form-label">{t.admin_room_min}

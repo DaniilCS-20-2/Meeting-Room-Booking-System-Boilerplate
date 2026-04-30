@@ -106,10 +106,10 @@ class BookingRepository {
   }
 
   // Получаем активные бронирования всех комнат за период (для общего календаря).
-  // Тот же набор полей, что и findByRoom, плюс name комнаты для подписи/цвета.
+  // Тот же набор полей, что и findByRoom, плюс name+color комнаты для подписи/цвета.
   static async findAllInRange({ from, to } = {}) {
     let query = `
-      SELECT b.id, b.room_id, r.name AS room_name, b.user_id,
+      SELECT b.id, b.room_id, r.name AS room_name, r.color AS room_color, b.user_id,
              COALESCE(u.display_name, b.user_name_snapshot) AS user_name,
              u.avatar_url AS user_avatar,
              u.company_id,

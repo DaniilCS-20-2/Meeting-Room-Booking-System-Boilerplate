@@ -184,6 +184,8 @@ const roomCreateSchema = z
     photoUrl: z.string().trim().max(500).nullable().optional(),
     equipment: z.string().trim().max(2000).nullable().optional(),
     isDisabled: z.boolean().optional(),
+    // HEX-цвет комнаты для общего календаря (или null чтобы сбросить на дефолт-хэш).
+    color: z.union([hexColor, z.literal(""), z.null()]).optional(),
   })
   .strict();
 

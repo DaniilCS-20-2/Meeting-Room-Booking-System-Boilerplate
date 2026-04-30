@@ -103,6 +103,9 @@ export const t = {
   admin_room_description: "Skildring",       // Метка: описание.
   admin_room_equipment: "Utstyr",            // Метка: оборудование.
   admin_room_photo: "Bilete-URL",            // Метка: URL фотографии.
+  admin_room_color: "Farge",
+  admin_room_color_pick: "Vel farge",
+  admin_room_color_reset: "Tilbakestill",
   admin_room_min: "Min. booking (min)",
   admin_room_max: "Maks. booking (min)",
   admin_room_no_limit: "Inga grense",

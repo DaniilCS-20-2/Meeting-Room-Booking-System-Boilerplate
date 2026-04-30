@@ -9,7 +9,7 @@ class RoomRepository {
     const where = includeDisabled ? "" : "WHERE is_disabled = FALSE";
     // Формируем SELECT-запрос со всеми полями комнаты.
     const { rows } = await pool.query(
-      `SELECT id, name, location, capacity, description, equipment, photo_url, photos,
+      `SELECT id, name, location, capacity, description, equipment, photo_url, photos, color,
               min_booking_minutes, max_booking_minutes, status, is_disabled,
               created_at, updated_at
        FROM rooms ${where}
@@ -23,7 +23,7 @@ class RoomRepository {
   static async findById(id) {
     // Формируем SELECT-запрос по первичному ключу.
     const { rows } = await pool.query(
-      `SELECT id, name, location, capacity, description, equipment, photo_url, photos,
+      `SELECT id, name, location, capacity, description, equipment, photo_url, photos, color,
               min_booking_minutes, max_booking_minutes, status, is_disabled,
               created_at, updated_at
        FROM rooms WHERE id = $1`,
@@ -38,26 +38,20 @@ class RoomRepository {
     // Формируем параметризованный INSERT-запрос.
     const { rows } = await pool.query(
       `INSERT INTO rooms (name, location, capacity, description, equipment, photo_url,
-                          min_booking_minutes, max_booking_minutes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                          min_booking_minutes, max_booking_minutes, color)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
-        // Имя комнаты (обязательное).
         payload.name,
-        // Локация комнаты (этаж/зона).
         payload.location || "",
-        // Вместимость (количество человек).
         payload.capacity,
-        // Описание комнаты.
         payload.description || null,
-        // Перечень оборудования.
         payload.equipment || null,
-        // URL фотографии комнаты.
         payload.photoUrl || null,
-        // Минимальная длительность бронирования (в минутах).
         payload.minBookingMinutes || 15,
-        // Максимальная длительность бронирования (в минутах).
         payload.maxBookingMinutes || 480,
+        // HEX-цвет комнаты (для общего календаря); NULL = «не задан».
+        payload.color || null,
       ]
     );
     // Возвращаем созданную запись.
@@ -67,6 +61,11 @@ class RoomRepository {
   static async update(id, payload) {
     const minVal = payload.minBookingMinutes === undefined ? undefined : payload.minBookingMinutes;
     const maxVal = payload.maxBookingMinutes === undefined ? undefined : payload.maxBookingMinutes;
+
+    // color обрабатываем отдельно, чтобы можно было ОЧИСТИТЬ (передать null).
+    // Флаг $13 = «нужно ли вообще трогать color», иначе COALESCE-логика
+    // не отличала бы «не передал» от «явно стереть в NULL».
+    const colorProvided = Object.prototype.hasOwnProperty.call(payload, "color");
 
     const { rows } = await pool.query(
       `UPDATE rooms SET
@@ -78,6 +77,7 @@ class RoomRepository {
          photo_url           = COALESCE($7, photo_url),
          min_booking_minutes = CASE WHEN $10::boolean THEN $8::integer ELSE min_booking_minutes END,
          max_booking_minutes = CASE WHEN $11::boolean THEN $9::integer ELSE max_booking_minutes END,
+         color               = CASE WHEN $13::boolean THEN $12 ELSE color END,
          updated_at          = NOW()
        WHERE id = $1
        RETURNING *`,
@@ -93,6 +93,8 @@ class RoomRepository {
         maxVal !== undefined ? maxVal : null,
         minVal !== undefined,
         maxVal !== undefined,
+        colorProvided ? (payload.color || null) : null,
+        colorProvided,
       ]
     );
     return rows[0] || null;

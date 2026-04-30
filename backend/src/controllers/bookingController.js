@@ -66,6 +66,7 @@ const getAllInRange = async (req, res, next) => {
         id: b.id,
         room_id: b.room_id,
         room_name: b.room_name,
+        room_color: b.room_color,
         start_time: b.start_time,
         end_time: b.end_time,
         status: b.status,
