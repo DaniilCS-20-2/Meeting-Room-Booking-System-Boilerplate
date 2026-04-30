@@ -788,6 +788,26 @@ body {
 .calendar-grid__cell:hover { overflow: visible; z-index: 30; }
 .calendar-grid__cell:hover .cal-tip { display: block; }
 
+/* --- Адаптивное позиционирование тултипа --- */
+/* По умолчанию тултип отрисовывается под ячейкой по центру.
+   Эти модификаторы переключают его в нужную сторону, чтобы он не вылезал
+   за границы сетки на крайних строках/колонках. */
+.cal-tip--up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+.cal-tip--align-left {
+  left: 0;
+  transform: none;
+}
+.cal-tip--align-right {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 /* Textarea внутри формы бронирования. */
 .form-input--textarea {
   resize: vertical;

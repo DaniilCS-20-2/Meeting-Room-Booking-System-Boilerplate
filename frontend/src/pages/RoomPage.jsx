@@ -344,6 +344,17 @@ export const RoomPage = () => {
   // Генерируем массив дней для недельного календаря.
   const weekDays = useMemo(() => buildWeekGrid(weekStart), [weekStart]);
 
+  // Помощник: классы для адаптивного позиционирования тултипа над ячейкой.
+  // На последних часах суток показываем выше; на крайних колонках —
+  // прижимаем к одному из краёв ячейки, чтобы тултип не вылезал за сетку.
+  const tipPosClass = (dayIdx, hour) => {
+    let cls = "";
+    if (hour >= 16) cls += " cal-tip--up";
+    if (dayIdx >= 5) cls += " cal-tip--align-right";
+    else if (dayIdx <= 1) cls += " cal-tip--align-left";
+    return cls;
+  };
+
   const getSlotInfo = (day, hour) => {
     const slotStart = new Date(day);
     slotStart.setHours(hour, 0, 0, 0);
@@ -527,7 +538,7 @@ export const RoomPage = () => {
             <div key={h} className="calendar-grid__row">
               {/* Метка часа в левом столбце. */}
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
-              {weekDays.map((d) => {
+              {weekDays.map((d, dayIdx) => {
                 const info = getSlotInfo(d, h);
                 // В read-only режиме (viewer/аноним) ячейка нейтрально-серая,
                 // никаких цветов компаний и точных минут наружу.
@@ -569,7 +580,7 @@ export const RoomPage = () => {
                     {cellLabel && <span className={`calendar-grid__label ${info.past ? "calendar-grid__label--past" : ""}`}>{cellLabel}</span>}
                     {/* Tooltip только для авторизованных писателей (user/admin). */}
                     {info?.booked && canWrite && (
-                      <div className="cal-tip" role="tooltip">
+                      <div className={`cal-tip${tipPosClass(dayIdx, h)}`} role="tooltip">
                         {info.bookings.map((b, i) => (
                           <div key={b.id || i} className="cal-tip__row">
                             <div className="cal-tip__time">

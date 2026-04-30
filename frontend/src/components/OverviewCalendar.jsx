@@ -121,6 +121,16 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
   const prevWeek = () => setWeekStart(new Date(weekStart.getTime() - 7 * 86400000));
   const nextWeek = () => setWeekStart(new Date(weekStart.getTime() + 7 * 86400000));
 
+  // Адаптивное позиционирование тултипа: на нижних часах — вверх, на крайних
+  // колонках — прижимаем к ближайшему краю, чтобы тултип не вылезал за сетку.
+  const tipPosClass = (dayIdx, hour) => {
+    let cls = "";
+    if (hour >= 16) cls += " cal-tip--up";
+    if (dayIdx >= 5) cls += " cal-tip--align-right";
+    else if (dayIdx <= 1) cls += " cal-tip--align-left";
+    return cls;
+  };
+
   return (
     <section className="overview-cal">
       <div className="overview-cal__head">
@@ -159,7 +169,7 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
           {HOURS.map((h) => (
             <div key={h} className="calendar-grid__row">
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
-              {weekDays.map((d) => {
+              {weekDays.map((d, dayIdx) => {
                 const info = slotInfo(d, h);
                 return (
                   <div
@@ -189,7 +199,7 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
                       </div>
                     )}
                     {info && canSeeDetails && (
-                      <div className="cal-tip" role="tooltip">
+                      <div className={`cal-tip${tipPosClass(dayIdx, h)}`} role="tooltip">
                         {info.allBookings.map((b, i) => (
                           <div key={b.id || i} className="cal-tip__row">
                             <div className="cal-tip__time">
