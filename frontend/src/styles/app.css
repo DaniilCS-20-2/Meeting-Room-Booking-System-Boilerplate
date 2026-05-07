@@ -869,6 +869,12 @@ body {
 }
 .calendar-grid__body { user-select: none; }
 
+/* Прошедшие свободные ячейки — светло-серый фон (отдельно для overview календаря,
+   т.к. там .overview-cal__cell перебивает фон через !important) */
+.overview-cal__cell.calendar-grid__cell--expired {
+  background: #e5e7eb !important;
+}
+
 /* Ряд выбора цвета в форме редактирования комнаты. */
 .admin-room-color-row {
   display: flex; align-items: center; gap: 8px;
