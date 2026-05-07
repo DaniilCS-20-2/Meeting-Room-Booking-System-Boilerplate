@@ -616,7 +616,7 @@ export const RoomPage = () => {
                   : null;
 
                 // Решаем, как реагировать на ячейку.
-                // Свободная и в будущем → drag-/click-создание; занятая своя/любая для админа → onClick на редактирование.
+                // Drag — только на свободных; Click — везде для создания (или редактирования своих).
                 const cellTime = new Date(d); cellTime.setHours(h, 0, 0, 0);
                 const cellInPast = cellTime <= new Date();
                 const isFree = !info?.booked;
@@ -628,20 +628,25 @@ export const RoomPage = () => {
                 let cellClickable = false;
                 if (canWrite && !cellInPast) {
                   if (isFree) {
-                    // На свободной ячейке: мышью/тачем — drag (одиночный «клик» = drag со start=end);
-                    // клавиатурой — Enter/Space → 1ч-слот через openCreateModal.
+                    // Свободная ячейка: drag для выделения диапазона, click для 1ч-слота
                     onCellMouseDown = () => handleCellMouseDown(d, h, true, cellInPast);
                     onCellMouseEnter = () => handleCellMouseEnter(d, h);
+                    onCellClick = () => { if (!drag) openCreateModal(d, h); };
                     onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCreateModal(d, h); } };
                     cellClickable = true;
                   } else if (!info.past) {
+                    // Занятая ячейка: своя бронь → редактирование, чужая → создание новой
                     const primary = info.bookings?.[0];
                     const isOwner = primary?.user_id && primary.user_id === user?.id;
                     if (isOwner || isAdmin) {
                       onCellClick = () => openEditModal(primary);
                       onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditModal(primary); } };
-                      cellClickable = true;
+                    } else {
+                      // Чужая бронь — клик открывает создание (можно добавить свою бронь на часть часа)
+                      onCellClick = () => openCreateModal(d, h);
+                      onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCreateModal(d, h); } };
                     }
+                    cellClickable = true;
                   }
                 }
 
