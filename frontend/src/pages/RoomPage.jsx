@@ -163,15 +163,18 @@ export const RoomPage = () => {
   };
   useEffect(loadComments, [roomId, token]);
 
-  // Открытие модалки для создания брони — клик по свободной ячейке.
-  // По умолчанию даём слот в 1 час, пользователь сможет подправить в модалке.
-  const openCreateModal = (day, hour) => {
+  // Открытие модалки для создания брони — клик по ячейке.
+  // Если forcedStart/forcedEnd переданы (например, свободный gap в частично занятой ячейке),
+  // используем их; иначе даём слот в 1 час.
+  const openCreateModal = (day, hour, forcedStart = null, forcedEnd = null) => {
     if (!canWrite) return;
-    const start = new Date(day);
-    start.setHours(hour, 0, 0, 0);
+    const cellStart = new Date(day);
+    cellStart.setHours(hour, 0, 0, 0);
     // Слот в прошлом — не открываем модалку.
-    if (start <= new Date()) return;
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    if (cellStart <= new Date()) return;
+    const cellEnd = new Date(cellStart.getTime() + 60 * 60 * 1000);
+    const start = forcedStart || cellStart;
+    const end = forcedEnd || cellEnd;
     setBookingModal({ open: true, mode: "create", initialStart: start, initialEnd: end, booking: null });
   };
 
@@ -387,6 +390,53 @@ export const RoomPage = () => {
       // Показываем ошибку через alert.
       alert(err.message);
     }
+  };
+
+  // Находит первый свободный gap в ячейке (для частично занятых).
+  // Возвращает {start, end} или null, если вся ячейка занята.
+  const findFreeGapInCell = (day, hour, bookingsInCell) => {
+    const cellStart = new Date(day);
+    cellStart.setHours(hour, 0, 0, 0);
+    const cellEnd = new Date(cellStart.getTime() + 60 * 60 * 1000);
+    const now = new Date();
+
+    // Сортируем брони в ячейке по start_time
+    const sorted = [...bookingsInCell].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+    // Проверяем gap перед первой бронью
+    const firstBookingStart = new Date(sorted[0].start_time);
+    if (firstBookingStart > cellStart) {
+      const gapStart = cellStart < now ? now : cellStart;
+      const gapEnd = firstBookingStart;
+      if (gapEnd > gapStart && gapEnd.getTime() - gapStart.getTime() >= 5 * 60 * 1000) {
+        return { start: gapStart, end: gapEnd };
+      }
+    }
+
+    // Проверяем gaps между бронями
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const endCurrent = new Date(sorted[i].end_time);
+      const startNext = new Date(sorted[i + 1].start_time);
+      if (startNext > endCurrent) {
+        const gapStart = endCurrent < now ? now : endCurrent;
+        const gapEnd = startNext;
+        if (gapEnd > gapStart && gapEnd.getTime() - gapStart.getTime() >= 5 * 60 * 1000) {
+          return { start: gapStart, end: gapEnd };
+        }
+      }
+    }
+
+    // Проверяем gap после последней брони
+    const lastBookingEnd = new Date(sorted[sorted.length - 1].end_time);
+    if (cellEnd > lastBookingEnd) {
+      const gapStart = lastBookingEnd < now ? now : lastBookingEnd;
+      const gapEnd = cellEnd;
+      if (gapEnd > gapStart && gapEnd.getTime() - gapStart.getTime() >= 5 * 60 * 1000) {
+        return { start: gapStart, end: gapEnd };
+      }
+    }
+
+    return null;
   };
 
   const handleDeleteComment = (id) => {
@@ -642,8 +692,15 @@ export const RoomPage = () => {
                       onCellClick = () => openEditModal(primary);
                       onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditModal(primary); } };
                     } else {
-                      // Чужая бронь — клик открывает создание (можно добавить свою бронь на часть часа)
-                      onCellClick = () => openCreateModal(d, h);
+                      // Чужая бронь — клик открывает создание, подставляем свободный gap если есть
+                      onCellClick = () => {
+                        const gap = findFreeGapInCell(d, h, info.bookings);
+                        if (gap) {
+                          openCreateModal(d, h, gap.start, gap.end);
+                        } else {
+                          openCreateModal(d, h);
+                        }
+                      };
                       onCellKeyDown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCreateModal(d, h); } };
                     }
                     cellClickable = true;
