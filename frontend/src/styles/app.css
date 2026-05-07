@@ -329,6 +329,15 @@ body {
 }
 .calendar-grid__cell--booked { background: #fecaca; }
 .calendar-grid__cell--past { background: #e5e7eb; }
+
+/* Прошедшие свободные ячейки (нельзя бронировать) — светло-серый фон */
+.calendar-grid__cell--expired {
+  background: #f3f4f6;
+  cursor: default;
+}
+.calendar-grid__cell--expired:hover {
+  outline: none;
+}
 /* Тонкий светлый внутренний контур разделяет подряд идущие цветные ячейки,
    чтобы одно длинное бронирование не выглядело одним сплошным блоком. */
 .calendar-grid__cell--booked {

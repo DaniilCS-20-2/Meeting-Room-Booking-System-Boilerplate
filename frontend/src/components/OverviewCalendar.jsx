@@ -184,10 +184,15 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
               <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d, dayIdx) => {
                 const info = slotInfo(d, h);
+                // Проверяем, прошло ли время ячейки (для свободных — серый фон)
+                const cellTime = new Date(d);
+                cellTime.setHours(h, 0, 0, 0);
+                const isExpired = !info && cellTime <= new Date();
+
                 return (
                   <div
                     key={d.toISOString() + h}
-                    className={`calendar-grid__cell overview-cal__cell ${info ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}`}
+                    className={`calendar-grid__cell overview-cal__cell ${info ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${isExpired ? " calendar-grid__cell--expired" : ""}`}
                   >
                     {info && (
                       <div className="overview-cal__chunks">

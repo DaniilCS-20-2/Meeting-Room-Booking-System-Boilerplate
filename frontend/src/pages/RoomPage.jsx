@@ -647,9 +647,12 @@ export const RoomPage = () => {
 
                 const dragSelected = isInDrag(d, h);
 
+                // Прошедшие свободные ячейки — отдельный стиль (светло-серый, не кликабельны)
+                const isExpiredFree = cellInPast && isFree;
+
                 return (
                   <div key={d.toISOString() + h}
-                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${cellClickable ? " calendar-grid__cell--clickable" : ""}${dragSelected ? " calendar-grid__cell--drag" : ""}`}
+                    className={`calendar-grid__cell ${info?.booked ? (info.past ? "calendar-grid__cell--past" : "calendar-grid__cell--booked") : ""}${cellClickable ? " calendar-grid__cell--clickable" : ""}${dragSelected ? " calendar-grid__cell--drag" : ""}${isExpiredFree ? " calendar-grid__cell--expired" : ""}`}
                     style={cellStyle}
                     onMouseDown={onCellMouseDown}
                     onMouseEnter={onCellMouseEnter}
