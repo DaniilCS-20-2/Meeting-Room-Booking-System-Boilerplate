@@ -192,6 +192,7 @@ class BookingRepository {
   static async findById(id) {
     const { rows } = await pool.query(
       `SELECT b.id, b.room_id, b.user_id, b.start_time, b.end_time, b.status, b.comment, b.created_at,
+              b.recurrence_group_id,
               COALESCE(u.email,        b.user_email_snapshot) AS user_email,
               COALESCE(u.display_name, b.user_name_snapshot)  AS user_name,
               r.name AS room_name

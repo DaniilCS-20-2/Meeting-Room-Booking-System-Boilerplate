@@ -825,6 +825,23 @@ body {
   line-height: 1.4;
 }
 
+/* Информационный блок (например, при частичном создании recurring серии). */
+.info-block {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.info-text {
+  color: #1e40af;
+  font-size: 14px;
+  margin: 0;
+}
+
 /* --- Кликабельные ячейки календаря --- */
 .calendar-grid__cell--clickable {
   cursor: pointer;

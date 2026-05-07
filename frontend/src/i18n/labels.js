@@ -189,4 +189,5 @@ export const t = {
   modal_confirm_cancel_text: "Er du sikker på at du vil avbestille denne bookinga?",
   modal_confirm_cancel_series_title: "Avbestill serie",
   modal_confirm_cancel_series_text: "Avbestille alle framtidige bookingar i denne serien?",
+  modal_series_created_partial: "Serien oppretta: {created} bookingar. {skipped} tidspunkt var opptatt og vart hoppa over.",
 };

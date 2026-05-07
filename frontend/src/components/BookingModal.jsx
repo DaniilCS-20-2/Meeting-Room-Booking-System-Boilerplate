@@ -109,7 +109,9 @@ export const BookingModal = ({
     });
   };
 
-  const handleCreate = () => {
+  const [createdInfo, setCreatedInfo] = useState(null);
+
+  const handleCreate = async () => {
     if (!start || !end) {
       setError("Vel start- og sluttid.");
       return;
@@ -118,15 +120,15 @@ export const BookingModal = ({
     if (useRecurring) {
       if (weekdays.size === 0) { setError("Vel minst éin ukedag."); return; }
       if (!untilDate) { setError("Vel sluttdato for serien."); return; }
-      // ISO с концом дня untilDate, чтобы включить последний выбранный день.
       const until = new Date(untilDate);
       until.setHours(23, 59, 59, 999);
       recurring = { weekdays: [...weekdays], untilDate: until.toISOString() };
     }
-    askThenRun({
-      title: useRecurring ? t.modal_confirm_series_title : t.modal_confirm_create_title,
-      text: useRecurring ? t.modal_confirm_series_text : t.modal_confirm_create_text,
-      run: () => apiFetch("/bookings", {
+    setError("");
+    setCreatedInfo(null);
+    try {
+      setBusy(true);
+      const result = await apiFetch("/bookings", {
         method: "POST",
         token,
         body: {
@@ -136,8 +138,22 @@ export const BookingModal = ({
           comment: comment.trim() || null,
           recurring,
         },
-      }),
-    });
+      });
+      setBusy(false);
+      // Если серия создана с пропущенными днями — показываем инфо.
+      if (result?.totalSkipped > 0) {
+        setCreatedInfo({
+          created: result.totalCreated,
+          skipped: result.totalSkipped,
+        });
+      } else {
+        onSaved?.();
+        onClose?.();
+      }
+    } catch (err) {
+      setBusy(false);
+      setError(err.message || "Noko gjekk gale.");
+    }
   };
 
   const handleShorten = () => {
@@ -271,6 +287,22 @@ export const BookingModal = ({
             )}
 
             {error && <p className="error-text">{error}</p>}
+
+            {createdInfo && (
+              <div className="info-block">
+                <p className="info-text">
+                  {t.modal_series_created_partial?.replace("{created}", createdInfo.created).replace("{skipped}", createdInfo.skipped) ||
+                    `Serien oppretta: ${createdInfo.created} bookingar. ${createdInfo.skipped} tidspunkt var opptatt og vart hoppa over.`}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => { onSaved?.(); onClose?.(); }}
+                >
+                  OK
+                </button>
+              </div>
+            )}
           </div>
 
           <footer className="modal__footer">

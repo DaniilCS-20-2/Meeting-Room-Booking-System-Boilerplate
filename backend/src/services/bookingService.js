@@ -113,12 +113,13 @@ class BookingService {
 
     // Выполняем все вставки в одной транзакции.
     return BookingRepository.withTransaction(async (client) => {
-      // Инициализируем массив созданных бронирований.
+      // Инициализируем массив созданных бронирований и список пропущенных (конфликтных).
       const createdBookings = [];
+      const skippedOccurrences = [];
 
       // Последовательно создаём каждое вхождение.
       for (const occurrence of occurrences) {
-        // Проверяем конфликт перед вставкой для ясной 409-ошибки.
+        // Проверяем конфликт перед вставкой.
         const hasConflict = await BookingRepository.hasTimeConflict(
           client,
           roomId,
@@ -126,10 +127,14 @@ class BookingService {
           occurrence.endTime
         );
 
-        // Если конфликт найден, прекращаем операцию.
+        // Если конфликт найден — пропускаем этот день, но продолжаем с остальными.
         if (hasConflict) {
-          // Возвращаем 409 Conflict.
-          throw new HttpError(409, "Selected room is already booked for this time slot.");
+          skippedOccurrences.push({
+            startTime: occurrence.startTime,
+            endTime: occurrence.endTime,
+            reason: "time conflict",
+          });
+          continue;
         }
 
         // Вставляем бронирование в БД.
@@ -147,11 +152,18 @@ class BookingService {
         createdBookings.push(inserted);
       }
 
-      // Возвращаем результат создания одной/нескольких записей.
+      // Если не создано ни одной брони (все дни были заняты) — считаем это ошибкой.
+      if (createdBookings.length === 0) {
+        throw new HttpError(409, "All selected time slots are already booked.");
+      }
+
+      // Возвращаем результат создания одной/нескольких записей + информацию о пропущенных.
       return {
         totalCreated: createdBookings.length,
+        totalSkipped: skippedOccurrences.length,
         recurrenceGroupId: createdBookings[0]?.recurrence_group_id || null,
         bookings: createdBookings,
+        skipped: skippedOccurrences,
       };
     }).catch((error) => {
       // Если ошибка пришла из PostgreSQL по исключающему ограничению, конвертируем в 409.
