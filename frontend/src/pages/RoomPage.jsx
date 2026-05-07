@@ -607,55 +607,53 @@ export const RoomPage = () => {
         </div>
       </div>
 
-      {/* ---- Недельный календарь + сайдбар (история/комментарии) ---- */}
-      <div className="room-main">
-        <div className="room-main__calendar">
-          <h2 className="section-title">{t.room_calendar}</h2>
-          {/* Навигация по неделям: стрелки влево/вправо. */}
-          <div className="calendar-nav">
-            <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
-            {/* Диапазон дат текущей недели. */}
-            <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
-            <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+      {/* ---- Недельный календарь ---- */}
+      <h2 className="section-title">{t.room_calendar}</h2>
+      {/* Навигация по неделям: стрелки влево/вправо. */}
+      <div className="calendar-nav">
+        <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
+        {/* Диапазон дат текущей недели. */}
+        <span>{weekStart.toLocaleDateString("nn-NO")} &ndash; {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}</span>
+        <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+      </div>
+      {/* Легенда компаний — только для тех, кто видит сами компании. */}
+      {canWrite && (() => {
+        const seen = new Map();
+        for (const b of bookings) {
+          if (b.company_id && !seen.has(b.company_id)) {
+            seen.set(b.company_id, { name: b.company_name, color: b.company_color });
+          }
+        }
+        if (seen.size === 0) return null;
+        return (
+          <div className="calendar-legend">
+            {[...seen.entries()].map(([id, c]) => (
+              <span key={id} className="calendar-legend__item">
+                <span className="calendar-legend__dot" style={{ background: c.color }} />
+                {c.name}
+              </span>
+            ))}
           </div>
-          {/* Легенда компаний — только для тех, кто видит сами компании. */}
-          {canWrite && (() => {
-            const seen = new Map();
-            for (const b of bookings) {
-              if (b.company_id && !seen.has(b.company_id)) {
-                seen.set(b.company_id, { name: b.company_name, color: b.company_color });
-              }
-            }
-            if (seen.size === 0) return null;
-            return (
-              <div className="calendar-legend">
-                {[...seen.entries()].map(([id, c]) => (
-                  <span key={id} className="calendar-legend__item">
-                    <span className="calendar-legend__dot" style={{ background: c.color }} />
-                    {c.name}
-                  </span>
-                ))}
-              </div>
-            );
-          })()}
-          {/* Сетка календаря: дни × часы. */}
-          <div className="calendar-grid">
-            {/* Заголовок: названия дней недели. */}
-            <div className="calendar-grid__header">
-              <div className="calendar-grid__corner"></div>
-              {weekDays.map((d) => (
-                <div key={d.toISOString()} className="calendar-grid__day-label">
-                  {/* Форматируем: короткий день + число. */}
-                  {d.toLocaleDateString("nn-NO", { weekday: "short", day: "numeric" })}
-                </div>
-              ))}
+        );
+      })()}
+      {/* Сетка календаря: дни × часы. */}
+      <div className="calendar-grid">
+        {/* Заголовок: названия дней недели. */}
+        <div className="calendar-grid__header">
+          <div className="calendar-grid__corner"></div>
+          {weekDays.map((d) => (
+            <div key={d.toISOString()} className="calendar-grid__day-label">
+              {/* Форматируем: короткий день + число. */}
+              {d.toLocaleDateString("nn-NO", { weekday: "short", day: "numeric" })}
             </div>
-            {/* Тело: строка на каждый час с ячейками на каждый день. */}
-            <div className="calendar-grid__body">
-              {HOURS.map((h) => (
-                <div key={h} className="calendar-grid__row">
-                  {/* Метка часа в левом столбце. */}
-                  <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
+          ))}
+        </div>
+        {/* Тело: строка на каждый час с ячейками на каждый день. */}
+        <div className="calendar-grid__body">
+          {HOURS.map((h) => (
+            <div key={h} className="calendar-grid__row">
+              {/* Метка часа в левом столбце. */}
+              <div className="calendar-grid__hour">{String(h).padStart(2, "0")}:00</div>
               {weekDays.map((d, dayIdx) => {
                 const info = getSlotInfo(d, h);
                 // В read-only режиме (viewer/аноним) ячейка нейтрально-серая,
@@ -757,15 +755,10 @@ export const RoomPage = () => {
         </div>
       </div>
 
-          </div>{/* .calendar-grid */}
-        </div>{/* .room-main__calendar */}
-
-        {/* Сайдбар: история + комментарии — только для авторизованных писателей. */}
-        {canWrite && (
-        <div className="room-main__sidebar">
-          <div className="room-sidebar">
-            {/* История бронирований. */}
-            <div className="room-sidebar__section room-sidebar__history">
+      {/* История + комментарии — только для авторизованных писателей. */}
+      {canWrite && (
+      <div className="room-bottom">
+        {/* Левая половина: история бронирований. */}
         <div className="room-bottom__history">
           <div className="history-header">
             <h2 className="section-title">{t.room_history}</h2>
@@ -869,12 +862,10 @@ export const RoomPage = () => {
                 <p className="comment-item__text">{c.message}</p>
               </div>
             ))}
-          </div>{/* .comments-list */}
-          </div>{/* .room-sidebar__section */}
-        </div>{/* .room-sidebar */}
-      </div>{/* .room-main__sidebar */}
+          </div>
+        </div>
+      </div>
       )}
-    </div>{/* .room-main */}
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
