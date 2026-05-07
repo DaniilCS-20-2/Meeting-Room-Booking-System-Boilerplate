@@ -281,6 +281,15 @@ body {
 .room-carousel__dot--active { background: #374151; }
 .room-page__title { margin: 0 0 10px; font-size: 26px; }
 .room-top__label { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #374151; }
+
+/* Подсказка о клике по календарю — крупнее и заметнее */
+.room-top__booking .helper-text {
+  font-size: 15px;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 8px 0;
+}
 .room-slots {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -288,8 +297,9 @@ body {
   margin-bottom: 14px;
 }
 .room-book-form { display: grid; gap: 10px; margin-bottom: 14px; }
-.room-info { font-size: 14px; color: #475569; margin-bottom: 10px; }
-.room-info p { margin: 2px 0; }
+.room-info { font-size: 16px; color: #374151; margin-bottom: 10px; font-weight: 500; }
+.room-info p { margin: 6px 0; line-height: 1.5; }
+.room-info strong { color: #111827; }
 .room-admin-actions { margin-top: 8px; }
 
 /* --- Календарь --- */
