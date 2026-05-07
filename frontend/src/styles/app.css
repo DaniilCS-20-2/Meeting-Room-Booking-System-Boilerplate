@@ -881,6 +881,47 @@ body {
   margin-top: 4px;
 }
 
+/* --- Двухколоночный layout для страницы комнаты (ПК) --- */
+.room-main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  margin-top: 16px;
+}
+.room-main__calendar {
+  min-width: 0;
+}
+.room-main__sidebar {
+  min-width: 0;
+}
+
+/* Сайдбар: история + комментарии */
+.room-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.room-sidebar__section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+.room-sidebar__history {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Мобильная версия — возвращаем вертикальный layout */
+@media (max-width: 900px) {
+  .room-main {
+    grid-template-columns: 1fr;
+  }
+  .room-main__sidebar {
+    order: 2;
+  }
+}
+
 /* --- Общий обзорный календарь на главной --- */
 .overview-cal { margin: 16px 0 32px; }
 .overview-cal__head {
