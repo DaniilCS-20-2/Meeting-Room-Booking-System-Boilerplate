@@ -139,10 +139,10 @@ const cancel = async (req, res, next) => {
   }
 };
 
-// PATCH /api/bookings/:id — укорачивание времени окончания.
+// PATCH /api/bookings/:id — редактирование времени окончания.
 const updateBooking = async (req, res, next) => {
   try {
-    const updated = await BookingService.shortenBooking({
+    const updated = await BookingService.updateBookingEndTime({
       bookingId: req.params.id,
       requesterId: req.user.id,
       requesterRole: req.user.role,

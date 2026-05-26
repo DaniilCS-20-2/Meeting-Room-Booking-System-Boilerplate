@@ -65,7 +65,12 @@ const getContrastText = (hex) => {
 
 const fmtClock = (d) => d.toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" });
 
-export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
+export const OverviewCalendar = ({
+  token,
+  canSeeDetails = false,
+  showFullscreenButton = false,
+  fullscreen = false,
+}) => {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => startOfWeek());
   const [bookings, setBookings] = useState([]);
@@ -145,16 +150,40 @@ export const OverviewCalendar = ({ token, canSeeDetails = false }) => {
   };
 
   return (
-    <section className="overview-cal">
+    <section className={`overview-cal ${fullscreen ? "overview-cal--fullscreen" : ""}`}>
       <div className="overview-cal__head">
         <h2 className="section-title overview-cal__title">{t.home_overview_calendar}</h2>
-        <div className="calendar-nav">
-          <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
-          <span>
-            {weekStart.toLocaleDateString("nn-NO")} &ndash;{" "}
-            {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}
-          </span>
-          <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+        <div className="overview-cal__actions">
+          <div className="calendar-nav">
+            <button type="button" className="btn btn--small" onClick={prevWeek}>&larr;</button>
+            <span>
+              {weekStart.toLocaleDateString("nn-NO")} &ndash;{" "}
+              {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString("nn-NO")}
+            </span>
+            <button type="button" className="btn btn--small" onClick={nextWeek}>&rarr;</button>
+          </div>
+          {showFullscreenButton && (
+            <button
+              type="button"
+              className="btn btn--small overview-cal__fullscreen-btn"
+              onClick={() => navigate("/calendar")}
+              title="Opne fullskjerm-kalender"
+              aria-label="Opne fullskjerm-kalender"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M9 20H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M12 17V20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

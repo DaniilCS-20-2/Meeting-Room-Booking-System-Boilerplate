@@ -156,8 +156,8 @@ const createBookingSchema = z
   })
   .strict();
 
-// PATCH /api/bookings/:id — пока поддерживаем ТОЛЬКО укорачивание,
-// поэтому единственное поле — endDateTime. Сервис проверит, что новое end < старого end.
+// PATCH /api/bookings/:id — редактирование окончания (укорачивать/удлинять).
+// Передаём только endDateTime, а бизнес-правила валидирует сервис.
 const updateBookingSchema = z
   .object({
     endDateTime: z.string().min(5).max(40),

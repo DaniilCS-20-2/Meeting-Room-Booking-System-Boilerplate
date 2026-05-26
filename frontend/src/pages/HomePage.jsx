@@ -157,6 +157,7 @@ export const HomePage = () => {
       <OverviewCalendar
         token={token}
         canSeeDetails={!!user && user.role !== "viewer"}
+        showFullscreenButton
       />
 
       {confirmAction && (

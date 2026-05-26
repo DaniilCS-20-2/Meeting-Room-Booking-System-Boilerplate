@@ -45,6 +45,21 @@ class BookingRepository {
     return rowCount > 0;
   }
 
+  // Проверяем конфликт интервала, исключая конкретное бронирование по id
+  // (нужно для редактирования времени существующей записи).
+  static async hasTimeConflictExcludingBooking(client, roomId, startTime, endTime, excludeBookingId) {
+    const { rowCount } = await client.query(
+      `SELECT 1 FROM bookings
+       WHERE room_id = $1
+         AND status IN ('pending', 'confirmed')
+         AND id <> $4
+         AND tstzrange(start_time, end_time, '[)') && tstzrange($2::timestamptz, $3::timestamptz, '[)')
+       LIMIT 1`,
+      [roomId, startTime, endTime, excludeBookingId]
+    );
+    return rowCount > 0;
+  }
+
   // Выполняем callback внутри транзакции с автоматическим commit/rollback.
   static async withTransaction(callback) {
     // Берём клиент из пула для изолированной транзакции.

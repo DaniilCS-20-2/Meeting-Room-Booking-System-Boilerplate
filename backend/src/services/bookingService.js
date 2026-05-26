@@ -175,10 +175,11 @@ class BookingService {
     });
   }
 
-  // Укорачивание брони: новый end_time должен быть строго раньше старого
-  // и хотя бы на 1 минуту позже start_time. Также соблюдаем minBookingMinutes.
-  // Удлинять нельзя — это поможет защититься от случайного «затоптания» соседних слотов.
-  static async shortenBooking({ bookingId, requesterId, requesterRole, newEndDateTime }) {
+  // Редактирование времени окончания брони:
+  // - можно и укорачивать, и удлинять;
+  // - при удлинении проверяем конфликты с другими бронированиями комнаты;
+  // - соблюдаем min/max ограничения комнаты.
+  static async updateBookingEndTime({ bookingId, requesterId, requesterRole, newEndDateTime }) {
     if (!bookingId) throw new HttpError(400, "bookingId is required.");
     if (!newEndDateTime) throw new HttpError(400, "endDateTime is required.");
 
@@ -200,29 +201,44 @@ class BookingService {
       throw new HttpError(400, "Invalid endDateTime.");
     }
 
-    const oldEnd = new Date(booking.end_time);
     const start = new Date(booking.start_time);
 
-    if (newEnd >= oldEnd) {
-      throw new HttpError(400, "New end time must be earlier than the current end time.");
-    }
     if (newEnd <= start) {
       throw new HttpError(400, "New end time must be after the start time.");
     }
     if (newEnd <= new Date()) {
-      throw new HttpError(400, "Cannot shorten a booking to a time in the past.");
+      throw new HttpError(400, "Cannot set booking end time in the past.");
     }
 
     const room = await RoomRepository.findById(booking.room_id);
     if (room) {
       const newDuration = getDurationMinutes(start, newEnd);
-      // Только нижнюю границу проверяем (укорачиваем — превысить max невозможно).
       if (room.min_booking_minutes != null && newDuration < room.min_booking_minutes) {
         throw new HttpError(
           400,
           `Booking must be at least ${room.min_booking_minutes} minutes for this room.`
         );
       }
+      if (room.max_booking_minutes != null && newDuration > room.max_booking_minutes) {
+        throw new HttpError(
+          400,
+          `Booking cannot exceed ${room.max_booking_minutes} minutes for this room.`
+        );
+      }
+    }
+
+    // Проверяем пересечение с другими бронями этой комнаты.
+    const hasConflict = await BookingRepository.withTransaction((client) =>
+      BookingRepository.hasTimeConflictExcludingBooking(
+        client,
+        booking.room_id,
+        start,
+        newEnd,
+        bookingId
+      )
+    );
+    if (hasConflict) {
+      throw new HttpError(409, "Selected room is already booked for this time slot.");
     }
 
     const updated = await BookingRepository.updateEndTime(bookingId, newEnd);

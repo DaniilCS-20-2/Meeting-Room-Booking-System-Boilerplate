@@ -12,6 +12,7 @@ import { RoomPage } from "./pages/RoomPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AdminRoomPage } from "./pages/AdminRoomPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { OverviewCalendarPage } from "./pages/OverviewCalendarPage";
 // Импортируем объект переводов (Nynorsk).
 import { t } from "./i18n/labels";
 
@@ -107,6 +108,7 @@ const AppLayout = () => {
         <Route path="/auth" element={<AuthPage />} />
         {/* Страница комнаты — публично (анонимы видят read-only календарь). */}
         <Route path="/rooms/:roomId" element={<RoomPage />} />
+        <Route path="/calendar" element={<OverviewCalendarPage />} />
         {/* Страница профиля — только для авторизованных пользователей. */}
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         {/* Создание новой комнаты — только для админов. */}

@@ -156,17 +156,12 @@ export const BookingModal = ({
     }
   };
 
-  const handleShorten = () => {
+  const handleUpdateEndTime = () => {
     if (!end) { setError("Vel ny sluttid."); return; }
     const newEnd = parseLocalInput(end);
-    const oldEnd = new Date(booking.end_time);
-    if (newEnd >= oldEnd) {
-      setError(t.modal_shorten_only);
-      return;
-    }
     askThenRun({
-      title: t.modal_confirm_shorten_title,
-      text: t.modal_confirm_shorten_text,
+      title: t.modal_confirm_update_title,
+      text: t.modal_confirm_update_text,
       run: () => apiFetch(`/bookings/${booking.id}`, {
         method: "PATCH",
         token,
@@ -234,7 +229,7 @@ export const BookingModal = ({
 
             {isEdit && (
               <p className="helper-text">
-                {t.modal_shorten_only} {t.modal_original_end}: {oldEndStr}.
+                {t.modal_edit_end_hint} {t.modal_original_end}: {oldEndStr}.
               </p>
             )}
 
@@ -316,7 +311,7 @@ export const BookingModal = ({
             )}
             {isEdit && canEditThisBooking && (
               <>
-                <button type="button" className="btn btn--small btn--neutral" onClick={handleCancelOne} disabled={busy}>
+                <button type="button" className="btn btn--small btn--danger" onClick={handleCancelOne} disabled={busy}>
                   {t.room_cancel_booking}
                 </button>
                 {booking?.recurrence_group_id && (
@@ -324,8 +319,8 @@ export const BookingModal = ({
                     {t.modal_cancel_series_btn}
                   </button>
                 )}
-                <button type="button" className="btn btn--primary" onClick={handleShorten} disabled={busy}>
-                  {t.modal_shorten_btn}
+                <button type="button" className="btn btn--primary" onClick={handleUpdateEndTime} disabled={busy}>
+                  {t.modal_update_btn}
                 </button>
               </>
             )}
