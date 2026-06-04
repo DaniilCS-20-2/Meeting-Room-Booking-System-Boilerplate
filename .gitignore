@@ -1,7 +1,17 @@
 node_modules/
 dist/
+
+# Секреты и ключи (не коммитить)
 .env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+*.pem
+*.pfx
+*.publishsettings
+PublishProfiles/
+
 *.log
-uploads/
 azure-deploy.zip
 backend/public/

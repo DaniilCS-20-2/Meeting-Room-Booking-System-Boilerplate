@@ -150,8 +150,25 @@ https://ВАШ-САЙТ.azurewebsites.net/display
 
 ## Важно про файлы (лого, фото)
 
-Папка `backend/uploads/` на App Service **может очищаться** при перезапуске.  
-Для production позже: Azure Blob Storage. На старте с кредитами — достаточно для теста.
+### Где хранятся
+
+| Что | Где |
+|-----|-----|
+| Сами файлы | `backend/uploads/` на диске сервера (JPEG после Sharp) |
+| Ссылки в БД | `photo_url`, `logo_url`, `avatar_url` — пути вида `/uploads/room-abc….jpg` |
+| Раздача | Express: `GET /uploads/…` из `backend/src/app.js` |
+| Загрузка | Админка → API → `imageUploadMiddleware.js` → запись в `uploads/` |
+
+Папка **`backend/uploads/` в Git** — при push/deploy файлы уезжают на Azure вместе с backend. После добавления новых фото: `git add backend/uploads` и push.
+
+Если на проде картинки битые, а в репозитории их ещё нет — один раз скопировать с ПК (`.\scripts\copy-uploads-to-azure.ps1`) или залить через Kudu / админку, затем закоммитить `backend/uploads`.
+
+Проверка: `https://ВАШ-САЙТ.azurewebsites.net/uploads/ИМЯ-ФАЙЛА.jpg`
+
+### Ограничение Azure
+
+Папка `backend/uploads/` на App Service **может очищаться** при перезапуске/масштабировании.  
+Для долгого production позже: **Azure Blob Storage** + правка кода. На старте с кредитами — копирования через Kudu обычно хватает.
 
 ---
 
