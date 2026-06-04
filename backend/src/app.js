@@ -107,7 +107,18 @@ app.use("/api/admin", adminRoutes);      // Администрирование �
 // Production: отдаём собранный React (backend/public) с одного домена.
 if (env.isProd) {
   const publicDir = path.join(__dirname, "../public");
-  app.use(express.static(publicDir, { index: false }));
+  // Vite ставит crossorigin на <script type="module"> — без ACAO браузер не выполняет JS (белый экран).
+  app.use(
+    express.static(publicDir, {
+      index: false,
+      setHeaders(res, filePath) {
+        const ext = path.extname(filePath);
+        if (ext === ".js" || ext === ".css") {
+          res.setHeader("Access-Control-Allow-Origin", "*");
+        }
+      },
+    })
+  );
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path === "/health") {
       return next();
