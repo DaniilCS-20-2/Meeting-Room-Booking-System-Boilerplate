@@ -254,9 +254,13 @@ body {
 .room-carousel__viewport {
   position: relative; width: 100%; overflow: hidden; border-radius: 10px;
   background: #e5e7eb;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .room-carousel__img {
   width: 100%; max-height: 360px; object-fit: cover; display: block;
+  pointer-events: none;
 }
 .room-carousel__arrow {
   position: absolute; top: 50%; transform: translateY(-50%);
@@ -273,6 +277,12 @@ body {
 .room-carousel__arrow:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+@media (hover: none), (max-width: 768px) {
+  .room-carousel__arrow {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .room-carousel__arrow:hover { background: #fff; }
 .room-carousel__arrow--left { left: 8px; }

@@ -1,5 +1,5 @@
 // Импортируем React и необходимые хуки.
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 // Импортируем хук аутентификации.
 import { useAuth } from "../context/AuthContext";
@@ -67,20 +67,48 @@ const UserAvatar = ({ url, name, size = 26 }) => {
   return <span className="user-avatar user-avatar--placeholder" style={style}>{getInitials(name)}</span>;
 };
 
+const SWIPE_THRESHOLD_PX = 48;
+
 const RoomCarousel = ({ photos, fallback, name }) => {
   const imgs = photos.length ? photos : (fallback ? [fallback] : []);
   const [idx, setIdx] = useState(0);
   const len = imgs.length;
+  const touchStart = useRef(null);
 
   const prev = useCallback(() => setIdx((i) => (i - 1 + len) % len), [len]);
   const next = useCallback(() => setIdx((i) => (i + 1) % len), [len]);
+
+  useEffect(() => setIdx(0), [len]);
+
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const onTouchEnd = (e) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || len < 2) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) next();
+    else prev();
+  };
 
   if (!len) return <div className="room-top__photo"><div className="room-top__placeholder" /></div>;
 
   return (
     <div className="room-carousel">
-      <div className="room-carousel__viewport">
-        <img src={toSrc(imgs[idx])} alt={name} className="room-carousel__img" />
+      <div
+        className="room-carousel__viewport"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <img src={toSrc(imgs[idx])} alt={name} className="room-carousel__img" draggable={false} />
         {len > 1 && (
           <>
             <button type="button" className="room-carousel__arrow room-carousel__arrow--left" onClick={prev}>‹</button>
