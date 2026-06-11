@@ -29,9 +29,7 @@ const pickFitTier = (items) => {
 
   const byCount =
     count >= 9 ? 4 :
-    count >= 6 ? 3 :
-    count >= 5 ? 3 :
-    count >= 4 ? 1 : 0;
+    count >= 4 ? 3 : 0;
 
   const byLoad =
     load >= 11.5 ? 4 :
@@ -186,7 +184,7 @@ export const TvDisplayPage = () => {
 
   const fitClass = [
     fitTier > 0 ? `tv-display--fit-${fitTier}` : "",
-    fitTier === 3 && visibleItems.length <= 7 ? "tv-display--fit-3-soft" : "",
+    fitTier === 3 && visibleItems.length <= 8 ? "tv-display--fit-3-soft" : "",
   ].filter(Boolean).join(" ");
 
   return (

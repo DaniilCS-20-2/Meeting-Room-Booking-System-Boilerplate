@@ -955,8 +955,10 @@ body.tv-display-root--preview,
 }
 .tv-display__list {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
+  width: 100%;
+  max-width: min(960px, 94%);
   display: grid;
   grid-template-columns: repeat(var(--tv-list-cols), minmax(0, 1fr));
   gap: var(--tv-list-gap);
