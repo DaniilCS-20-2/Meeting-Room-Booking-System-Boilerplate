@@ -855,10 +855,30 @@ body.tv-display-root--preview,
 }
 .tv-display__content {
   width: min(1150px, 100%);
+  margin: 0 auto;
 }
 .tv-display--fit-3 .tv-display__content,
 .tv-display--fit-4 .tv-display__content {
-  width: min(1400px, 100%);
+  width: min(1200px, 100%);
+}
+.tv-display__columns {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(24px, 4vw, 48px);
+  width: 100%;
+  margin: 0 auto;
+}
+.tv-display__col {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 540px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tv-list-gap);
 }
 .tv-display__preview-banner {
   position: fixed;

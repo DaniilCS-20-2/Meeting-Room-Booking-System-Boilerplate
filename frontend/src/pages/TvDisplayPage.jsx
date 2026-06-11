@@ -45,6 +45,41 @@ const pickFitTier = (items) => {
 const fmtClock = (iso) =>
   new Date(iso).toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" });
 
+const DisplayRow = ({ item }) => (
+  <li className="tv-display__row">
+    <div className="tv-display__brand">
+      {item.companyLogoUrl ? (
+        <img
+          src={resolveUploadUrl(item.companyLogoUrl)}
+          alt={item.companyName || ""}
+          className="tv-display__logo"
+        />
+      ) : (
+        <span className="tv-display__logo-spacer" aria-hidden="true" />
+      )}
+    </div>
+    <div className="tv-display__info">
+      <span className="tv-display__time">
+        {fmtClock(item.startTime)} – {fmtClock(item.endTime)}
+      </span>
+      <p className="tv-display__room">{item.roomName}</p>
+      {(item.guestNames || item.guestNote) && (
+        <div className="tv-display__guest-block">
+          {item.guestNames && (
+            <p className="tv-display__guests">{item.guestNames}</p>
+          )}
+          {item.guestNote && (
+            <p className="tv-display__guest-note">{item.guestNote}</p>
+          )}
+        </div>
+      )}
+      {item.hostName && (
+        <p className="tv-display__host">{item.hostName}</p>
+      )}
+    </div>
+  </li>
+);
+
 const dayBounds = () => {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -70,6 +105,13 @@ export const TvDisplayPage = () => {
   );
 
   const fitTier = useMemo(() => pickFitTier(visibleItems), [visibleItems]);
+  const useTwoColumns = fitTier >= 3;
+
+  const columnGroups = useMemo(() => {
+    if (!useTwoColumns || visibleItems.length === 0) return null;
+    const mid = Math.ceil(visibleItems.length / 2);
+    return [visibleItems.slice(0, mid), visibleItems.slice(mid)];
+  }, [visibleItems, useTwoColumns]);
 
   const dayLabel = useMemo(
     () => bounds.start.toLocaleDateString("nn-NO", {
@@ -166,42 +208,23 @@ export const TvDisplayPage = () => {
           <p className="tv-display__empty">{t.display_empty}</p>
         )}
 
-        <ul className="tv-display__list">
-          {visibleItems.map((item) => (
-            <li key={item.id} className="tv-display__row">
-              <div className="tv-display__brand">
-                {item.companyLogoUrl ? (
-                  <img
-                    src={resolveUploadUrl(item.companyLogoUrl)}
-                    alt={item.companyName || ""}
-                    className="tv-display__logo"
-                  />
-                ) : (
-                  <span className="tv-display__logo-spacer" aria-hidden="true" />
-                )}
-              </div>
-              <div className="tv-display__info">
-                <span className="tv-display__time">
-                  {fmtClock(item.startTime)} – {fmtClock(item.endTime)}
-                </span>
-                <p className="tv-display__room">{item.roomName}</p>
-                {(item.guestNames || item.guestNote) && (
-                  <div className="tv-display__guest-block">
-                    {item.guestNames && (
-                      <p className="tv-display__guests">{item.guestNames}</p>
-                    )}
-                    {item.guestNote && (
-                      <p className="tv-display__guest-note">{item.guestNote}</p>
-                    )}
-                  </div>
-                )}
-                {item.hostName && (
-                  <p className="tv-display__host">{item.hostName}</p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        {useTwoColumns && columnGroups ? (
+          <div className="tv-display__columns">
+            {columnGroups.map((col, idx) => (
+              <ul key={idx} className="tv-display__col">
+                {col.map((item) => (
+                  <DisplayRow key={item.id} item={item} />
+                ))}
+              </ul>
+            ))}
+          </div>
+        ) : (
+          <ul className="tv-display__list">
+            {visibleItems.map((item) => (
+              <DisplayRow key={item.id} item={item} />
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
