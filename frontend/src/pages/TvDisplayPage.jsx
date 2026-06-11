@@ -184,10 +184,13 @@ export const TvDisplayPage = () => {
     return () => clearInterval(reloadTimer);
   }, []);
 
-  const fitClass = fitTier > 0 ? ` tv-display--fit-${fitTier}` : "";
+  const fitClass = [
+    fitTier > 0 ? `tv-display--fit-${fitTier}` : "",
+    fitTier === 3 && visibleItems.length <= 6 ? "tv-display--fit-3-soft" : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <div className={`tv-display${fitClass}`}>
+    <div className={`tv-display${fitClass ? ` ${fitClass}` : ""}`}>
       {previewTransparent && (
         <p className="tv-display__preview-banner">{t.display_preview_hint}</p>
       )}
