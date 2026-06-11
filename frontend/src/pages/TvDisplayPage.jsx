@@ -3,6 +3,10 @@ import { useSearchParams } from "react-router-dom";
 import { apiFetch, resolveUploadUrl } from "../api";
 import { t } from "../i18n/labels";
 
+const DATA_POLL_MS = 15_000;
+const CLOCK_TICK_MS = 15_000;
+const PAGE_RELOAD_MS = 10 * 60_000;
+
 const fmtClock = (iso) =>
   new Date(iso).toLocaleTimeString("nn-NO", { hour: "2-digit", minute: "2-digit" });
 
@@ -14,24 +18,40 @@ const dayBounds = () => {
   return { start, end };
 };
 
+const lineParts = (item) =>
+  [item.roomName, item.guestNames, item.hostName, item.companyName].filter(Boolean);
+
 export const TvDisplayPage = () => {
   const [searchParams] = useSearchParams();
   const previewTransparent = searchParams.get("preview") === "1";
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dayLabel, setDayLabel] = useState("");
+  const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [now, setNow] = useState(() => Date.now());
 
-  const bounds = useMemo(() => dayBounds(), []);
+  const bounds = useMemo(() => dayBounds(), [dayKey]);
 
   const visibleItems = useMemo(
     () => items.filter((item) => new Date(item.endTime).getTime() > now),
     [items, now]
   );
 
+  const dayLabel = useMemo(
+    () => bounds.start.toLocaleDateString("nn-NO", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }),
+    [bounds.start]
+  );
+
   useEffect(() => {
-    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    const tick = setInterval(() => {
+      setNow(Date.now());
+      const today = new Date().toDateString();
+      setDayKey((prev) => (prev !== today ? today : prev));
+    }, CLOCK_TICK_MS);
     return () => clearInterval(tick);
   }, []);
 
@@ -53,20 +73,13 @@ export const TvDisplayPage = () => {
   }, [previewTransparent]);
 
   useEffect(() => {
-    setDayLabel(bounds.start.toLocaleDateString("nn-NO", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }));
-  }, [bounds.start]);
-
-  useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
       try {
         const data = await apiFetch(
-          `/display/today?from=${encodeURIComponent(bounds.start.toISOString())}&to=${encodeURIComponent(bounds.end.toISOString())}`
+          `/display/today?from=${encodeURIComponent(bounds.start.toISOString())}&to=${encodeURIComponent(bounds.end.toISOString())}&_=${Date.now()}`,
+          { cache: "no-store" }
         );
         if (!cancelled) setItems(Array.isArray(data) ? data : []);
       } catch {
@@ -77,12 +90,23 @@ export const TvDisplayPage = () => {
     };
 
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, DATA_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [bounds.start, bounds.end]);
+
+  useEffect(() => {
+    const reloadTimer = setInterval(() => window.location.reload(), PAGE_RELOAD_MS);
+    return () => clearInterval(reloadTimer);
+  }, []);
 
   return (
     <div className="tv-display">
@@ -91,26 +115,23 @@ export const TvDisplayPage = () => {
       )}
 
       <div className="tv-display__content">
-      <header className="tv-display__head">
-        <p className="tv-display__heading">
-          <span className="tv-display__title">{t.display_title}</span>
-          {dayLabel && (
-            <>
-              <span className="tv-display__sep" aria-hidden="true">·</span>
+        <header className="tv-display__head">
+          <p className="tv-display__heading">
+            <span className="tv-display__title">{t.display_title}</span>
+            {dayLabel && (
               <span className="tv-display__date">{dayLabel}</span>
-            </>
-          )}
-        </p>
-      </header>
+            )}
+          </p>
+        </header>
 
-      {loading && <p className="tv-display__empty">{t.display_loading}</p>}
+        {loading && <p className="tv-display__empty">{t.display_loading}</p>}
 
-      {!loading && visibleItems.length === 0 && (
-        <p className="tv-display__empty">{t.display_empty}</p>
-      )}
+        {!loading && visibleItems.length === 0 && (
+          <p className="tv-display__empty">{t.display_empty}</p>
+        )}
 
-      <ul className="tv-display__list">
-        {visibleItems.map((item) => (
+        <ul className="tv-display__list">
+          {visibleItems.map((item) => (
             <li key={item.id} className="tv-display__row">
               {item.companyLogoUrl ? (
                 <img
@@ -126,30 +147,17 @@ export const TvDisplayPage = () => {
                   {fmtClock(item.startTime)} – {fmtClock(item.endTime)}
                 </span>
                 <p className="tv-display__line">
-                  <span className="tv-display__room">{item.roomName}</span>
-                  {item.guestLabel && (
-                    <>
-                      <span className="tv-display__dot" aria-hidden="true">·</span>
-                      <span className="tv-display__guest">{item.guestLabel}</span>
-                    </>
-                  )}
-                  {item.hostName && (
-                    <>
-                      <span className="tv-display__dot" aria-hidden="true">·</span>
-                      <span className="tv-display__host">{item.hostName}</span>
-                    </>
-                  )}
-                  {item.companyName && (
-                    <>
-                      <span className="tv-display__dot" aria-hidden="true">·</span>
-                      <span className="tv-display__company">{item.companyName}</span>
-                    </>
-                  )}
+                  {lineParts(item).map((text, i) => (
+                    <span key={i} className="tv-display__part">{text}</span>
+                  ))}
                 </p>
+                {item.guestNote && (
+                  <p className="tv-display__note">{item.guestNote}</p>
+                )}
               </div>
             </li>
-        ))}
-      </ul>
+          ))}
+        </ul>
       </div>
     </div>
   );

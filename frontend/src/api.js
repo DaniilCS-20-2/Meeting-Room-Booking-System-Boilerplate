@@ -11,7 +11,7 @@ export const resolveUploadUrl = (url) =>
 
 // Универсальная обёртка для fetch-запросов к backend.
 // Принимает путь, метод, тело и токен авторизации.
-export async function apiFetch(path, { method = "GET", body, token } = {}) {
+export async function apiFetch(path, { method = "GET", body, token, cache } = {}) {
   // Формируем заголовки запроса с типом контента JSON.
   const headers = { "Content-Type": "application/json" };
   // Если передан JWT-токен, добавляем его в заголовок Authorization.
@@ -21,8 +21,8 @@ export async function apiFetch(path, { method = "GET", body, token } = {}) {
   const res = await fetch(`${API}${path}`, {
     method,
     headers,
-    // Сериализуем тело запроса в JSON, если оно передано.
     body: body ? JSON.stringify(body) : undefined,
+    cache,
   });
 
   // Пытаемся распарсить JSON-ответ (может быть пустым при ошибках).

@@ -116,6 +116,9 @@ if (env.isProd) {
         if (ext === ".js" || ext === ".css") {
           res.setHeader("Access-Control-Allow-Origin", "*");
         }
+        if (path.basename(filePath) === "index.html") {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        }
       },
     })
   );
@@ -123,6 +126,7 @@ if (env.isProd) {
     if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path === "/health") {
       return next();
     }
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(publicDir, "index.html"));
   });
 }
