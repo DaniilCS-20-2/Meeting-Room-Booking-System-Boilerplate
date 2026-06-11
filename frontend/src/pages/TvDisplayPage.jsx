@@ -186,7 +186,7 @@ export const TvDisplayPage = () => {
 
   const fitClass = [
     fitTier > 0 ? `tv-display--fit-${fitTier}` : "",
-    fitTier === 3 && visibleItems.length <= 6 ? "tv-display--fit-3-soft" : "",
+    fitTier === 3 && visibleItems.length <= 7 ? "tv-display--fit-3-soft" : "",
   ].filter(Boolean).join(" ");
 
   return (
