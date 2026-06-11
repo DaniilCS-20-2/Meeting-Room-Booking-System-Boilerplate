@@ -937,8 +937,16 @@ body.tv-display-root--preview,
   max-height: 190px;
   object-fit: contain;
   object-position: center center;
+  border-radius: 16px;
 }
-.tv-display[data-size="small"] .tv-display__logo { max-height: 88px; }
+.tv-display[data-size="small"] .tv-display__logo {
+  max-height: 88px;
+  border-radius: 12px;
+}
+.tv-display[data-size="xlarge"] .tv-display__logo,
+.tv-display[data-size="large"] .tv-display__logo {
+  border-radius: 18px;
+}
 .tv-display__logo-spacer {
   width: var(--tv-logo-w);
   height: 1px;
