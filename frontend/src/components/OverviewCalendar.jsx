@@ -185,24 +185,26 @@ export const OverviewCalendar = ({
           <h2 className="section-title overview-cal__title">
             {t.home_overview_calendar}
           </h2>
-          <div className="overview-cal__week-nav" role="group" aria-label={t.home_overview_calendar}>
-            <button
-              type="button"
-              className="overview-cal__week-btn"
-              onClick={prevWeek}
-              aria-label={t.calendar_week_prev}
-            >
-              &larr;
-            </button>
-            <span className="overview-cal__week-label">{weekRangeLabel}</span>
-            <button
-              type="button"
-              className="overview-cal__week-btn"
-              onClick={nextWeek}
-              aria-label={t.calendar_week_next}
-            >
-              &rarr;
-            </button>
+          <div className="overview-cal__controls">
+            <div className="overview-cal__week-nav" role="group" aria-label={t.home_overview_calendar}>
+              <button
+                type="button"
+                className="overview-cal__week-btn"
+                onClick={prevWeek}
+                aria-label={t.calendar_week_prev}
+              >
+                &larr;
+              </button>
+              <span className="overview-cal__week-label">{weekRangeLabel}</span>
+              <button
+                type="button"
+                className="overview-cal__week-btn"
+                onClick={nextWeek}
+                aria-label={t.calendar_week_next}
+              >
+                &rarr;
+              </button>
+            </div>
             <button type="button" className="btn btn--small overview-cal__today-btn" onClick={goToday}>
               {t.calendar_today}
             </button>

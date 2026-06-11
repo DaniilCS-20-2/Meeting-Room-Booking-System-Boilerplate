@@ -1089,9 +1089,15 @@ body.tv-display-root--preview,
   .overview-cal__meta {
     grid-template-columns: 1fr;
   }
-  .overview-cal__week-nav {
+  .overview-cal__controls {
     justify-self: stretch;
     width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .overview-cal__week-nav {
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: center;
   }
   .overview-cal__fullscreen-btn {
@@ -1305,6 +1311,12 @@ body.tv-display-root--preview,
   display: block;
   min-width: 0;
 }
+.overview-cal__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
 .overview-cal__week-nav {
   display: inline-flex;
   align-items: center;
@@ -1345,8 +1357,9 @@ body.tv-display-root--preview,
   padding: 0 6px;
 }
 .overview-cal__today-btn {
-  margin-left: 2px;
   white-space: nowrap;
+  min-height: 42px;
+  flex-shrink: 0;
 }
 .overview-cal__fullscreen-btn {
   min-width: 38px;
