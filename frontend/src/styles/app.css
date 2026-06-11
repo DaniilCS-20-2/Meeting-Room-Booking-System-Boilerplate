@@ -1089,9 +1089,8 @@ body.tv-display-root--preview,
     flex-direction: column;
     align-items: stretch;
   }
-  .overview-cal__controls {
+  .overview-cal__top .overview-cal__week-nav {
     width: 100%;
-    justify-content: space-between;
   }
   .overview-cal__week-nav {
     flex: 1 1 auto;
@@ -1289,11 +1288,20 @@ body.tv-display-root--preview,
   flex: 1 1 auto;
   min-width: 0;
 }
-.overview-cal__controls {
+.overview-cal__meta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+}
+.overview-cal__meta .calendar-legend {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.overview-cal__meta-spacer {
+  flex: 1 1 auto;
 }
 .overview-cal__week-nav {
   display: inline-flex;
