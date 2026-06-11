@@ -1438,18 +1438,15 @@ body.tv-display-root--preview,
   min-height: 0;
 }
 .overview-cal--fullscreen .overview-cal__toolbar {
-  margin-bottom: 8px;
-  gap: 8px;
+  margin-bottom: 6px;
+  gap: 0;
 }
-.overview-cal--fullscreen .overview-cal__top {
-  gap: 12px;
-}
-.overview-cal--fullscreen .overview-cal__title {
-  font-size: clamp(20px, 2.2vw, 28px);
+.overview-cal--fullscreen .overview-cal__meta {
+  min-height: 0;
 }
 .overview-cal--fullscreen .overview-cal__week-label {
-  font-size: 15px;
-  min-width: 12em;
+  font-size: 14px;
+  min-width: 9.5em;
 }
 .overview-cal--fullscreen .calendar-legend {
   margin: 0;
