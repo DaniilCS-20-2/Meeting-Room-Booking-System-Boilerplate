@@ -134,14 +134,11 @@ export const TvDisplayPage = () => {
                 {item.companyLogoUrl ? (
                   <img
                     src={resolveUploadUrl(item.companyLogoUrl)}
-                    alt=""
+                    alt={item.companyName || ""}
                     className="tv-display__logo"
                   />
                 ) : (
                   <span className="tv-display__logo-spacer" aria-hidden="true" />
-                )}
-                {item.companyName && (
-                  <p className="tv-display__company">{item.companyName}</p>
                 )}
               </div>
               <div className="tv-display__info">
