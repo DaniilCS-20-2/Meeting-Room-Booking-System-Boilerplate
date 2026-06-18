@@ -857,14 +857,14 @@ body.tv-display-root--preview,
   max-width: min(720px, 88vw);
 }
 .tv-display[data-cols="2"] .tv-display__grid {
-  justify-content: space-between;
-  padding-inline: clamp(12px, 2.5vw, 40px);
+  justify-content: center;
+  padding-inline: 0;
   box-sizing: border-box;
 }
 .tv-display[data-cols="2"] .tv-display__col {
-  flex: 1 1 0;
-  width: auto;
-  max-width: calc(50% - var(--tv-col-gap) / 2);
+  flex: 0 1 var(--tv-col-w);
+  width: min(var(--tv-col-w), calc((100% - var(--tv-col-gap)) / 2));
+  max-width: min(var(--tv-col-w), calc((100% - var(--tv-col-gap)) / 2));
 }
 .tv-display[data-cols="3"] .tv-display__grid {
   justify-content: space-between;
